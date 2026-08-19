@@ -4,7 +4,8 @@
 
 import { HealthCheckResponse } from "@simplestore/shared-types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(
@@ -17,15 +18,35 @@ export class ApiError extends Error {
   }
 }
 
-interface RequestOptions extends RequestInit {
+export interface RequestOptions extends RequestInit {
   token?: string;
   params?: Record<string, string | number | boolean | undefined>;
 }
 
-async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { token, params, headers, ...customConfig } = options;
+type TokenOrOptions = string | RequestOptions | undefined;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+function normalizeOptions(opts?: TokenOrOptions): RequestOptions {
+  if (!opts) return {};
+  if (typeof opts === "string") {
+    return { token: opts };
+  }
+  return opts;
+}
+
+async function request<T>(
+  endpoint: string,
+  options?: TokenOrOptions
+): Promise<T> {
+  const normalized = normalizeOptions(options);
+  const { token, params, headers, ...customConfig } = normalized;
+
+  // Prefix with /api/v1 if not starting with /api/v1 or root /
+  let path = endpoint;
+  if (!path.startsWith("/api/v1") && !path.startsWith("http")) {
+    path = `/api/v1${path.startsWith("/") ? "" : "/"}${path}`;
+  }
+
+  let url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -60,7 +81,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       }
       throw new ApiError(
         response.status,
-        errorData.detail || errorData.message || `Request failed with status ${response.status}`,
+        errorData.detail ||
+          errorData.message ||
+          `Request failed with status ${response.status}`,
         errorData
       );
     }
@@ -74,19 +97,30 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (error instanceof ApiError) {
       throw error;
     }
-    throw new ApiError(0, (error as Error).message || "Network connection error");
+    throw new ApiError(
+      0,
+      (error as Error).message || "Network connection error"
+    );
   }
 }
 
 export const apiClient = {
-  get: <T>(endpoint: string, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "GET" }),
-  post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "POST", body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(endpoint: string, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "DELETE" }),
+  get: <T>(endpoint: string, options?: TokenOrOptions) =>
+    request<T>(endpoint, { ...normalizeOptions(options), method: "GET" }),
+  post: <T>(endpoint: string, body?: any, options?: TokenOrOptions) =>
+    request<T>(endpoint, {
+      ...normalizeOptions(options),
+      method: "POST",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+  patch: <T>(endpoint: string, body?: any, options?: TokenOrOptions) =>
+    request<T>(endpoint, {
+      ...normalizeOptions(options),
+      method: "PATCH",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+  delete: <T>(endpoint: string, options?: TokenOrOptions) =>
+    request<T>(endpoint, { ...normalizeOptions(options), method: "DELETE" }),
 
   // Specific domain helpers
   health: {

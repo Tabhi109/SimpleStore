@@ -25,9 +25,13 @@ export interface AuthResponse {
 }
 
 // -----------------------------------------------------------------------------
-// Theme & Design System
+// Theme & Design System Matrix
 // -----------------------------------------------------------------------------
 export type ThemeArchetype = "minimal" | "editorial" | "warm" | "bold";
+export type FontPairing = "sans" | "serif" | "mono" | "rounded";
+export type ColorPreset = "slate" | "indigo" | "emerald" | "amber" | "rose";
+export type StoreCurrency = "USD" | "INR" | "EUR" | "GBP" | "CAD" | "AUD" | "JPY";
+export type StoreLanguage = "en" | "hi" | "es" | "fr";
 
 export interface PaletteConfig {
   primary: string;
@@ -38,22 +42,13 @@ export interface PaletteConfig {
   muted: string;
 }
 
-export interface TypographyConfig {
-  heading_font: "serif" | "sans" | "mono";
-  body_font: "sans" | "serif";
-}
-
-export interface LayoutConfig {
-  hero_style: "centered" | "split" | "minimal";
-  product_grid_columns: 2 | 3 | 4;
-  card_style: "bordered" | "flat" | "elevated";
-}
-
 export interface ThemeConfig {
   archetype: ThemeArchetype;
-  palette: PaletteConfig;
-  typography: TypographyConfig;
-  layout: LayoutConfig;
+  font_pairing: FontPairing;
+  color_preset: ColorPreset;
+  enable_dark_mode_toggle: boolean;
+  hero_style: "centered" | "split" | "minimal";
+  palette?: PaletteConfig;
 }
 
 // -----------------------------------------------------------------------------
@@ -65,6 +60,8 @@ export interface OnboardingQuestionnaire {
   vibe: "minimal" | "warm" | "editorial" | "bold" | "playful" | "luxurious";
   product_summary: string;
   target_audience?: string;
+  currency?: StoreCurrency;
+  language?: StoreLanguage;
 }
 
 export interface StarterProductDraft {
@@ -72,12 +69,15 @@ export interface StarterProductDraft {
   description: string;
   suggested_price: number;
   inventory: number;
+  image_url?: string;
 }
 
 export interface OnboardingGeneratedResponse {
   tagline: string;
   description: string;
   recommended_theme: ThemeArchetype;
+  recommended_font: FontPairing;
+  recommended_color: ColorPreset;
   starter_products: StarterProductDraft[];
 }
 
@@ -93,11 +93,17 @@ export interface Store {
   tagline?: string | null;
   description?: string | null;
   logo_url?: string | null;
+  currency: StoreCurrency;
+  language: StoreLanguage;
   theme_config: ThemeConfig;
   onboarding_context?: OnboardingQuestionnaire | null;
   published: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface StorePublicData extends Store {
+  products: Product[];
 }
 
 // -----------------------------------------------------------------------------
@@ -117,6 +123,43 @@ export interface Product {
   published: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// -----------------------------------------------------------------------------
+// Coupon
+// -----------------------------------------------------------------------------
+export type DiscountType = "percentage" | "fixed";
+
+export interface Coupon {
+  id: string;
+  store_id: string;
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CreateCouponRequest {
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  is_active?: boolean;
+}
+
+export interface ValidateCouponRequest {
+  code: string;
+  cart_total: number;
+}
+
+export interface ValidateCouponResponse {
+  valid: boolean;
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  discount_amount: number;
+  final_total: number;
+  message?: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -151,7 +194,10 @@ export interface Order {
   customer_email: string;
   customer_phone?: string | null;
   shipping_address?: string | null;
+  subtotal_amount: number;
+  discount_amount: number;
   total_amount: number;
+  coupon_code?: string | null;
   currency: string;
   status: OrderStatus;
   payment_status: PaymentStatus;
@@ -165,6 +211,7 @@ export interface CreateOrderRequest {
   customer_email: string;
   customer_phone?: string;
   shipping_address?: string;
+  coupon_code?: string;
   items: Array<{
     product_id: string;
     quantity: number;

@@ -15,8 +15,12 @@ from app.ai.router import router as ai_router
 from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.dependencies import get_db, get_redis
+from app.coupons.router import router as coupons_router
 from app.database.session import engine
 from app.middleware.cors import setup_middleware
+from app.orders.router import router as orders_router
+from app.products.router import router as products_router
+from app.stores.router import router as stores_router
 
 # Configure logging
 logging.basicConfig(
@@ -118,6 +122,10 @@ async def health_check(
 
 # Mount Routers
 api_v1_router.include_router(auth_router)
+api_v1_router.include_router(stores_router)
+api_v1_router.include_router(products_router)
+api_v1_router.include_router(coupons_router)
+api_v1_router.include_router(orders_router)
 api_v1_router.include_router(ai_router)
 
 # Mount API v1 into app

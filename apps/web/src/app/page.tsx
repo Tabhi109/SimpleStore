@@ -1,318 +1,266 @@
 "use client";
 
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import {
-  Sparkles,
-  Database,
-  Server,
-  Zap,
-  ArrowRight,
-  ShieldCheck,
-  Palette,
-  CheckCircle2,
-  AlertCircle,
   Activity,
+  ArrowRight,
+  Bot,
+  CheckCircle2,
+  Database,
+  DollarSign,
+  Globe,
+  HardDrive,
   Layers,
+  Layout,
+  Moon,
+  Palette,
+  Rocket,
+  Shield,
+  ShoppingBag,
+  Sparkles,
+  Tag,
+  Type,
+  Zap,
 } from "lucide-react";
-
+import { HealthCheckResponse } from "@simplestore/shared-types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api-client";
-import { HealthCheckResponse } from "@simplestore/shared-types";
 
 export default function HomePage() {
-  const {
-    data: health,
-    isLoading: isHealthLoading,
-    isError: isHealthError,
-    refetch: refetchHealth,
-  } = useQuery<HealthCheckResponse>({
-    queryKey: ["system-health"],
-    queryFn: () => apiClient.health.check(),
-    refetchInterval: 10000,
-  });
+  const [health, setHealth] = useState<HealthCheckResponse | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState(true);
+
+  useEffect(() => {
+    async function checkHealth() {
+      try {
+        const data = await apiClient.get<HealthCheckResponse>("/health");
+        setHealth(data);
+      } catch {
+        setHealth(null);
+      } finally {
+        setLoadingHealth(false);
+      }
+    }
+    checkHealth();
+  }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
-      {/* Hero Section */}
-      <section className="w-full py-16 md:py-24 lg:py-28 px-4 text-center relative overflow-hidden bg-gradient-to-b from-muted/30 via-background to-background">
-        <div className="container max-w-4xl mx-auto flex flex-col items-center gap-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary shadow-sm backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            <span>AI-Guided Store Launch in 5 Minutes</span>
-          </div>
-
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Your store. <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              Without the complexity.
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Navigation */}
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto max-w-6xl flex h-16 items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black text-lg shadow-sm">
+              S
+            </div>
+            <span className="font-extrabold text-xl tracking-tight">
+              SimpleStore
             </span>
-          </h1>
+          </Link>
 
-          <p className="max-w-2xl text-muted-foreground text-base sm:text-lg md:text-xl font-normal leading-relaxed">
-            Answer 4 simple questions, pick a curated visual style, and let SimpleStore craft your
-            branding, starter products, and publish a live storefront with zero drag-and-drop fatigue.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <Button size="lg" className="h-12 px-8 text-base shadow-md font-semibold" asChild>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/auth/login">Merchant Login</Link>
+            </Button>
+            <Button size="sm" className="gap-2 shadow-sm font-semibold" asChild>
               <Link href="/onboarding">
-                Start 5-Minute Setup
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <Sparkles className="h-4 w-4" />
+                Launch Store Free
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="h-12 px-6 text-base" asChild>
-              <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer">
-                Explore FastAPI Docs
-              </a>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-20 sm:py-28 border-b border-border/40">
+        {/* Glow backdrop */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="container mx-auto max-w-5xl px-4 text-center space-y-6 relative z-10">
+          <Badge
+            variant="outline"
+            className="gap-2 py-1.5 px-4 text-xs font-semibold rounded-full border-primary/30 bg-primary/5 text-primary shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            SimpleStore • Your store. Without the complexity.
+          </Badge>
+
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.1] max-w-3xl mx-auto">
+            Sell online in <span className="text-primary underline decoration-primary/30 decoration-wavy decoration-2">5 minutes</span> with zero effort.
+          </h1>
+
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Answer 4 quick questions. Our deterministic design token matrix and AI copywriter build your storefront, catalog, and merchant dashboard instantly.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <Button size="lg" className="h-12 px-8 text-base font-bold gap-2 shadow-lg" asChild>
+              <Link href="/onboarding">
+                <Rocket className="h-5 w-5" />
+                Start 5-Minute Setup
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="h-12 px-6 text-base font-semibold" asChild>
+              <Link href="/dashboard">
+                Merchant Admin Portal
+              </Link>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Live System Diagnostics & Health Card */}
-      <section className="container max-w-5xl mx-auto px-4 py-8">
-        <Card className="border-border/80 shadow-sm overflow-hidden backdrop-blur-sm">
-          <CardHeader className="pb-4 bg-muted/20 border-b border-border/40">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Feature Highlights: Design Matrix & Capabilities */}
+      <section className="py-16 sm:py-20 border-b border-border/40 bg-muted/20">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Smart Frontend Architecture & Design Matrix
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Guaranteed beautiful stores with 80+ mathematically harmonious combinations. No ugly drag-and-drop mistakes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Theme Matrix */}
+            <Card className="shadow-sm border-border/60">
+              <CardHeader>
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-2">
+                  <Layout className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-base font-bold">
+                  4 Curated Style Archetypes
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Minimalist, Editorial Luxury, Warm Organic, and Bold High-Contrast. Instantly switchable with zero CSS overhead.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Card 2: Currency & Dark Mode */}
+            <Card className="shadow-sm border-border/60">
+              <CardHeader>
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-2">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-base font-bold">
+                  Custom Currency & Storefront Dark Mode
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Sell in USD ($), INR (₹), EUR (€), GBP (£), and CAD ($). Optional visitor theme switch in header.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Card 3: Coupons & Transaction Safety */}
+            <Card className="shadow-sm border-border/60">
+              <CardHeader>
+                <div className="h-10 w-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2">
+                  <Tag className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-base font-bold">
+                  Promo Codes & ACID Checkout
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Server-side coupon validation, row-locked atomic inventory deduction, and instant demo order receipts.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Live System Diagnostics Telemetry */}
+      <section className="py-12 bg-background border-b border-border/40">
+        <div className="container mx-auto max-w-4xl px-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-emerald-500 animate-pulse" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Live Monolith Infrastructure Health
+              </h3>
+            </div>
+            {health && (
+              <Badge
+                variant="outline"
+                className={`text-[11px] font-mono gap-1 ${
+                  health.status === "healthy"
+                    ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+                    : "text-amber-500 border-amber-500/30"
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {health.status.toUpperCase()}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Database Status */}
+            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Activity className="h-5 w-5 text-primary" />
+                <Database className="h-4 w-4 text-blue-500" />
                 <div>
-                  <CardTitle className="text-lg">System Foundation & Diagnostics</CardTitle>
-                  <CardDescription className="text-xs">
-                    Live telemetry across FastAPI, PostgreSQL, Redis, and AI boundaries
-                  </CardDescription>
+                  <p className="text-xs font-semibold">PostgreSQL 16</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Async SQLAlchemy 2.0
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {isHealthLoading ? (
-                  <Badge variant="outline" className="animate-pulse">Checking...</Badge>
-                ) : isHealthError ? (
-                  <Badge variant="destructive" className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> API Disconnected
-                  </Badge>
-                ) : (
-                  <Badge variant="success" className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> {health?.status?.toUpperCase()}
-                  </Badge>
-                )}
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => refetchHealth()}>
-                  Refresh
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Backend Service */}
-            <div className="p-4 rounded-lg border bg-background flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">FastAPI Backend</span>
-                <Server className="h-4 w-4 text-blue-500" />
-              </div>
-              <div className="text-base font-bold">
-                {isHealthLoading ? <Skeleton className="h-5 w-20" /> : isHealthError ? "Offline" : "v0.1.0 Ready"}
-              </div>
-              <div className="text-xs text-muted-foreground">Port 8000 (REST & OpenAPI)</div>
+              <span className="text-[11px] font-mono font-semibold text-emerald-500">
+                {health?.database.connected ? `${health.database.latency_ms}ms` : "Offline"}
+              </span>
             </div>
 
-            {/* PostgreSQL */}
-            <div className="p-4 rounded-lg border bg-background flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">PostgreSQL 16</span>
-                <Database className="h-4 w-4 text-indigo-500" />
+            {/* Redis Status */}
+            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <HardDrive className="h-4 w-4 text-red-500" />
+                <div>
+                  <p className="text-xs font-semibold">Redis 7</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Cache & Sessions
+                  </p>
+                </div>
               </div>
-              <div className="text-base font-bold flex items-center gap-1.5">
-                {isHealthLoading ? (
-                  <Skeleton className="h-5 w-24" />
-                ) : health?.database?.connected ? (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span>Connected</span>
-                    {health.database.latency_ms !== undefined && (
-                      <span className="text-xs font-normal text-muted-foreground">({health.database.latency_ms}ms)</span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-destructive text-sm font-medium">Pending DB</span>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">ACID Source of Truth</div>
+              <span className="text-[11px] font-mono font-semibold text-emerald-500">
+                {health?.redis.connected ? `${health.redis.latency_ms}ms` : "Offline"}
+              </span>
             </div>
 
-            {/* Redis */}
-            <div className="p-4 rounded-lg border bg-background flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Redis 7</span>
-                <Zap className="h-4 w-4 text-amber-500" />
+            {/* AI Engine Status */}
+            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Bot className="h-4 w-4 text-amber-500" />
+                <div>
+                  <p className="text-xs font-semibold">Sarvam AI</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Structured Copy & Fallbacks
+                  </p>
+                </div>
               </div>
-              <div className="text-base font-bold flex items-center gap-1.5">
-                {isHealthLoading ? (
-                  <Skeleton className="h-5 w-24" />
-                ) : health?.redis?.connected ? (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span>Active</span>
-                    {health.redis.latency_ms !== undefined && (
-                      <span className="text-xs font-normal text-muted-foreground">({health.redis.latency_ms}ms)</span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-destructive text-sm font-medium">Pending Cache</span>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">Storefront Caching & Rates</div>
+              <span className="text-[11px] font-mono font-semibold text-emerald-500">
+                {health?.ai_provider.configured ? "Ready" : "Fallback Ready"}
+              </span>
             </div>
-
-            {/* Sarvam AI Boundary */}
-            <div className="p-4 rounded-lg border bg-background flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AI Boundary</span>
-                <Sparkles className="h-4 w-4 text-violet-500" />
-              </div>
-              <div className="text-base font-bold">
-                {isHealthLoading ? (
-                  <Skeleton className="h-5 w-24" />
-                ) : health?.ai_provider?.configured ? (
-                  <Badge variant="success" className="text-xs">Sarvam AI Ready</Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">Fallback Active</Badge>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">100% Optional & Isolated</div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
-      {/* Pre-Defined Themes Showcase */}
-      <section className="container max-w-5xl mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pre-Defined UI/UX Archetypes</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Zero design guesswork. SimpleStore maps your brand to curated, professional templates.
+      {/* Footer */}
+      <footer className="mt-auto border-t border-border/40 py-8 bg-muted/20 text-center text-xs text-muted-foreground">
+        <div className="container mx-auto px-4 space-y-2">
+          <p className="font-semibold text-foreground">
+            SimpleStore — High-Performance E-Commerce Portfolio Application
           </p>
+          <p>Next.js 14 • FastAPI • PostgreSQL • Redis • Sarvam AI</p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Minimal */}
-          <div className="group relative rounded-xl border p-5 bg-card hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-base">Minimal</span>
-                <Badge variant="outline" className="text-[10px]">Clean / Sans</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Crisp monochrome whitespace with geometric typography. Perfect for modern accessories & essentials.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 pt-2 border-t text-[11px] text-muted-foreground font-mono">
-              <span className="h-3 w-3 rounded-full bg-slate-900" />
-              <span className="h-3 w-3 rounded-full bg-blue-600" />
-              <span className="h-3 w-3 rounded-full bg-slate-100 border" />
-            </div>
-          </div>
-
-          {/* Editorial */}
-          <div className="group relative rounded-xl border p-5 bg-card hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-base">Editorial</span>
-                <Badge variant="outline" className="text-[10px]">Serif / Luxury</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                High-end magazine aesthetic with elegant serif typography and storytelling product layouts.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 pt-2 border-t text-[11px] text-muted-foreground font-mono">
-              <span className="h-3 w-3 rounded-full bg-[#1e293b]" />
-              <span className="h-3 w-3 rounded-full bg-[#d97706]" />
-              <span className="h-3 w-3 rounded-full bg-[#fafaf9] border" />
-            </div>
-          </div>
-
-          {/* Warm */}
-          <div className="group relative rounded-xl border p-5 bg-card hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-base">Warm</span>
-                <Badge variant="outline" className="text-[10px]">Organic / Soft</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Earthy terracotta tones, rounded product cards, and soft ambient surfaces for bakeries, crafts & lifestyle.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 pt-2 border-t text-[11px] text-muted-foreground font-mono">
-              <span className="h-3 w-3 rounded-full bg-[#451a03]" />
-              <span className="h-3 w-3 rounded-full bg-[#ea580c]" />
-              <span className="h-3 w-3 rounded-full bg-[#fffbeb] border" />
-            </div>
-          </div>
-
-          {/* Bold */}
-          <div className="group relative rounded-xl border p-5 bg-card hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-base">Bold</span>
-                <Badge variant="outline" className="text-[10px]">High-Contrast</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Vibrant accents, strong borders, and expressive energetic layouts for streetwear & digital creators.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 pt-2 border-t text-[11px] text-muted-foreground font-mono">
-              <span className="h-3 w-3 rounded-full bg-[#09090b]" />
-              <span className="h-3 w-3 rounded-full bg-[#8b5cf6]" />
-              <span className="h-3 w-3 rounded-full bg-[#ffffff] border" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Engineering Principles Highlights */}
-      <section className="container max-w-5xl mx-auto px-4 py-12 border-t border-border/40">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">Server-Validated Calculations</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Prices and inventory allocations are recalculated and locked within ACID database transactions.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">Strict AI Boundary</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Sarvam AI powers copy assistance and starter drafts with full manual fallbacks and zero client key leaks.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">Modular Monolith</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Clean domain separation without distributed microservices or unnecessary infrastructure overhead.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      </footer>
     </div>
   );
 }

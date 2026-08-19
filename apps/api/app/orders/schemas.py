@@ -17,6 +17,7 @@ class OrderCreateRequest(BaseModel):
     customer_email: EmailStr
     customer_phone: str | None = None
     shipping_address: str | None = None
+    coupon_code: str | None = None
     items: list[OrderItemCreateSchema] = Field(..., min_length=1)
 
 
@@ -38,7 +39,10 @@ class OrderResponse(BaseModel):
     customer_email: EmailStr
     customer_phone: str | None = None
     shipping_address: str | None = None
+    subtotal_amount: Decimal
+    discount_amount: Decimal
     total_amount: Decimal
+    coupon_code: str | None = None
     currency: str
     status: str
     payment_status: str

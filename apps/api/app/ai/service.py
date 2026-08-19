@@ -91,8 +91,13 @@ class AIService:
 
                 parsed = json.loads(clean_json)
                 return OnboardingGenerationResult(
-                    tagline=parsed.get("tagline", f"Handcrafted {input_data.category} made with care."),
-                    description=parsed.get("description", f"Welcome to {input_data.store_name}. Discover our curated selection of high-quality {input_data.category}."),
+                    tagline=parsed.get(
+                        "tagline", f"Handcrafted {input_data.category} made with care."
+                    ),
+                    description=parsed.get(
+                        "description",
+                        f"Welcome to {input_data.store_name}. Discover our curated selection of high-quality {input_data.category}.",
+                    ),
                     recommended_theme=parsed.get("recommended_theme", "minimal"),
                     starter_products=[
                         StarterProductSuggestion(
@@ -105,7 +110,9 @@ class AIService:
                     ],
                 )
             except Exception as e:
-                logger.warning(f"Failed to parse AI response JSON: {e}. Using deterministic fallback.")
+                logger.warning(
+                    f"Failed to parse AI response JSON: {e}. Using deterministic fallback."
+                )
 
         # Deterministic Fallback if AI unavailable or invalid
         vibe_theme_map = {

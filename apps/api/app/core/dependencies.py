@@ -1,5 +1,6 @@
 """FastAPI dependency injection providers."""
 
+import uuid
 from collections.abc import AsyncGenerator
 
 import redis.asyncio as aioredis
@@ -48,7 +49,12 @@ async def get_current_user_optional(
     if not user_id:
         return None
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    try:
+        user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+    except (ValueError, TypeError):
+        return None
+
+    result = await db.execute(select(User).where(User.id == user_uuid))
     return result.scalar_one_or_none()
 
 

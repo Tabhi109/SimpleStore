@@ -6,8 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
@@ -18,17 +17,15 @@ if TYPE_CHECKING:
 
 class Product(Base, TimestampMixin):
     __tablename__ = "products"
-    __table_args__ = (
-        UniqueConstraint("store_id", "slug", name="uq_store_product_slug"),
-    )
+    __table_args__ = (UniqueConstraint("store_id", "slug", name="uq_store_product_slug"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     store_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("stores.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

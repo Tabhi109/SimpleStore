@@ -7,31 +7,12 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class PaletteSchema(BaseModel):
-    primary: str
-    accent: str
-    background: str
-    surface: str
-    text: str
-    muted: str
-
-
-class TypographySchema(BaseModel):
-    heading_font: str = "sans"
-    body_font: str = "sans"
-
-
-class LayoutSchema(BaseModel):
-    hero_style: str = "centered"
-    product_grid_columns: int = 3
-    card_style: str = "bordered"
-
-
 class ThemeConfigSchema(BaseModel):
-    archetype: str = "minimal"
-    palette: PaletteSchema
-    typography: TypographySchema
-    layout: LayoutSchema
+    archetype: str = "minimal"  # minimal, editorial, warm, bold
+    font_pairing: str = "sans"  # sans, serif, mono, rounded
+    color_preset: str = "slate"  # slate, indigo, emerald, amber, rose
+    enable_dark_mode_toggle: bool = True
+    hero_style: str = "centered"
 
 
 class StoreCreateRequest(BaseModel):
@@ -41,6 +22,8 @@ class StoreCreateRequest(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    currency: str = Field("USD", min_length=3, max_length=3)
+    language: str = Field("en", min_length=2, max_length=10)
     theme_config: ThemeConfigSchema | None = None
     onboarding_context: dict[str, Any] | None = None
 
@@ -51,6 +34,8 @@ class StoreUpdateRequest(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    currency: str | None = Field(None, min_length=3, max_length=3)
+    language: str | None = Field(None, min_length=2, max_length=10)
     theme_config: ThemeConfigSchema | None = None
     onboarding_context: dict[str, Any] | None = None
     published: bool | None = None
@@ -65,6 +50,8 @@ class StoreResponse(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    currency: str
+    language: str
     theme_config: dict[str, Any]
     onboarding_context: dict[str, Any] | None = None
     published: bool

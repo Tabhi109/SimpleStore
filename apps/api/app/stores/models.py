@@ -5,50 +5,40 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Boolean, ForeignKey, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.auth.models import User
+    from app.coupons.models import Coupon
     from app.orders.models import Order
     from app.products.models import Product
 
-# Default minimal theme token configuration
+# Default theme matrix token configuration
 DEFAULT_THEME_CONFIG: dict[str, Any] = {
     "archetype": "minimal",
-    "palette": {
-        "primary": "#0f172a",
-        "accent": "#2563eb",
-        "background": "#ffffff",
-        "surface": "#f8fafc",
-        "text": "#0f172a",
-        "muted": "#64748b",
-    },
-    "typography": {
-        "heading_font": "sans",
-        "body_font": "sans",
-    },
-    "layout": {
-        "hero_style": "centered",
-        "product_grid_columns": 3,
-        "card_style": "bordered",
-    },
+    "font_pairing": "sans",
+    "color_preset": "slate",
+    "enable_dark_mode_toggle": True,
+    "hero_style": "centered",
 }
+
+JSONType = JSON().with_variant(JSONB, "postgresql")
 
 
 class Store(Base, TimestampMixin):
     __tablename__ = "stores"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -79,13 +69,23 @@ class Store(Base, TimestampMixin):
         String(512),
         nullable=True,
     )
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        default="USD",
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(
+        String(10),
+        default="en",
+        nullable=False,
+    )
     theme_config: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSONType,
         default=DEFAULT_THEME_CONFIG,
         nullable=False,
     )
     onboarding_context: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
     )
     published: Mapped[bool] = mapped_column(
@@ -107,6 +107,11 @@ class Store(Base, TimestampMixin):
     )
     orders: Mapped[list[Order]] = relationship(
         "Order",
+        back_populates="store",
+        cascade="all, delete-orphan",
+    )
+    coupons: Mapped[list[Coupon]] = relationship(
+        "Coupon",
         back_populates="store",
         cascade="all, delete-orphan",
     )
