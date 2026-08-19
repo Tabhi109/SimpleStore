@@ -1,25 +1,30 @@
 FROM node:20-alpine AS base
 
-# Dependencies stage
+# 1. Install dependencies
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-COPY ../../packages/shared-types ../../packages/shared-types
+COPY package.json package-lock.json ./
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY apps/web/package.json ./apps/web/
+
 RUN npm ci
 
-# Builder stage
+# 2. Build the application
 FROM base AS builder
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-COPY ../../packages/shared-types ../../packages/shared-types
+COPY packages/shared-types ./packages/shared-types
+COPY apps/web ./apps/web
+COPY package.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app/apps/web
 RUN npm run build
 
-# Runner stage
+# 3. Production runner
 FROM base AS runner
 WORKDIR /app
 
@@ -29,14 +34,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web ./apps/web
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
+WORKDIR /app/apps/web
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]
