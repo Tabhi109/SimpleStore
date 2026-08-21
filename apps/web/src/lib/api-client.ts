@@ -33,6 +33,19 @@ function normalizeOptions(opts?: TokenOrOptions): RequestOptions {
   return opts;
 }
 
+function extractErrorMessage(errorData: any, statusText: string, status: number): string {
+  if (!errorData) return `Request failed with status ${status} (${statusText})`;
+  if (typeof errorData === "string") return errorData;
+  if (typeof errorData.detail === "string") return errorData.detail;
+  if (Array.isArray(errorData.detail)) {
+    return errorData.detail
+      .map((e: any) => (typeof e === "string" ? e : e.msg || e.message || JSON.stringify(e)))
+      .join(", ");
+  }
+  if (errorData.message && typeof errorData.message === "string") return errorData.message;
+  return `Request failed with status ${status}`;
+}
+
 async function request<T>(
   endpoint: string,
   options?: TokenOrOptions
@@ -79,13 +92,8 @@ async function request<T>(
       } catch {
         errorData = { detail: response.statusText };
       }
-      throw new ApiError(
-        response.status,
-        errorData.detail ||
-          errorData.message ||
-          `Request failed with status ${response.status}`,
-        errorData
-      );
+      const errorMessage = extractErrorMessage(errorData, response.statusText, response.status);
+      throw new ApiError(response.status, errorMessage, errorData);
     }
 
     if (response.status === 204) {

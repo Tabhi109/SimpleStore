@@ -1,19 +1,25 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { Store, User } from "@simplestore/shared-types";
 
 interface AuthState {
   user: User | null;
   token: string | null;
   activeStore: Store | null;
-  
+
   setAuth: (user: User, token: string) => void;
   setActiveStore: (store: Store | null) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
 }
+
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -40,6 +46,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "simplestore_auth_storage",
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? localStorage : noopStorage
+      ),
     }
   )
 );

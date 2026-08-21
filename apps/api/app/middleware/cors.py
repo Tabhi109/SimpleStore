@@ -7,8 +7,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.config import settings
-
 logger = logging.getLogger("simplestore.api")
 
 
@@ -20,7 +18,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
@@ -39,17 +36,24 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 def setup_middleware(app: FastAPI) -> None:
     """Register all middlewares on the FastAPI application instance."""
-    # CORS
+    # Request Logging (Inner)
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # Security Headers (Middle)
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # CORS (Outermost - added last so it processes preflight OPTIONS and response headers first)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ],
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
-
-    # Security Headers
-    app.add_middleware(SecurityHeadersMiddleware)
-
-    # Request Logging
-    app.add_middleware(RequestLoggingMiddleware)

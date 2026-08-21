@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { CartItem, Product, StoreCurrency } from "@simplestore/shared-types";
 
 interface CartState {
@@ -10,7 +10,7 @@ interface CartState {
   couponCode: string | null;
   discountAmount: number;
   currency: StoreCurrency;
-  
+
   // Actions
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
@@ -19,12 +19,18 @@ interface CartState {
   clearCart: () => void;
   setIsOpen: (isOpen: boolean) => void;
   setCurrency: (currency: StoreCurrency) => void;
-  
+
   // Computed
   getSubtotal: () => number;
   getTotal: () => number;
   getItemCount: () => number;
 }
+
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -118,6 +124,9 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "simplestore_cart_storage",
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? localStorage : noopStorage
+      ),
     }
   )
 );

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 class ProductCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    slug: str = Field(..., min_length=1, max_length=255)
+    slug: str | None = Field(None, max_length=255)
     description: str | None = None
     price: Decimal = Field(..., ge=0)
     currency: str = Field("USD", min_length=3, max_length=3)

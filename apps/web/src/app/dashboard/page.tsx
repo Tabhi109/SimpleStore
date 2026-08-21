@@ -213,14 +213,17 @@ export default function DashboardPage() {
   // Add Product Submit
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStore || !token || !newProdName) return;
+    const current = selectedStore || activeStore;
+    if (!current || !token || !newProdName) return;
 
     setIsSavingProduct(true);
     try {
+      const slug = newProdName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       const created = await apiClient.post<Product>(
-        `/stores/${selectedStore.id}/products`,
+        `/stores/${current.id}/products`,
         {
           name: newProdName,
+          slug,
           price: parseFloat(newProdPrice) || 0,
           inventory: parseInt(newProdInventory) || 0,
           description: newProdDesc,
@@ -253,12 +256,13 @@ export default function DashboardPage() {
   // Create Coupon Submit
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStore || !token || !newCouponCode) return;
+    const current = selectedStore || activeStore;
+    if (!current || !token || !newCouponCode) return;
 
     setIsSavingCoupon(true);
     try {
       const created = await apiClient.post<Coupon>(
-        `/stores/${selectedStore.id}/coupons`,
+        `/stores/${current.id}/coupons`,
         {
           code: newCouponCode.toUpperCase().trim(),
           discount_type: newCouponType,
