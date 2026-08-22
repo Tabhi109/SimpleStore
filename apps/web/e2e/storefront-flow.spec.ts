@@ -1,15 +1,32 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("SimpleStore End-to-End User Journey", () => {
-  test("Homepage loads and displays telemetry and CTAs", async ({ page }) => {
+  test("Homepage loads and displays telemetry, interactive sandbox, and theme toggle", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/SimpleStore/i);
     await expect(page.locator("h1")).toContainText("Sell online in 5 minutes");
 
     // Telemetry section
     await expect(page.getByText(/Live Monolith Infrastructure Health/i)).toBeVisible();
-    await expect(page.getByText(/PostgreSQL 16/i)).toBeVisible();
-    await expect(page.getByText(/Redis 7/i)).toBeVisible();
+    await expect(page.getByText("PostgreSQL 16", { exact: true })).toBeVisible();
+    await expect(page.getByText("Redis 7", { exact: true })).toBeVisible();
+
+    // Interactive Sandbox is present
+    await expect(page.getByText(/Test the Deterministic Design Matrix/i)).toBeVisible();
+    await page.click("button:has-text('Editorial Luxury')");
+    await page.click("button:has-text('Emerald')");
+
+    // Dark Mode Toggle works
+    const themeBtn = page.getByRole("button", { name: /Toggle theme/i });
+    await expect(themeBtn).toBeVisible();
+    await themeBtn.click();
+    await page.click("div[role='menuitem']:has-text('Dark')");
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    // Switch back to Light
+    await themeBtn.click();
+    await page.click("div[role='menuitem']:has-text('Light')");
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
   });
 
   test("Merchant can navigate to onboarding and generate a store", async ({ page }) => {

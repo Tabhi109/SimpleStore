@@ -479,9 +479,9 @@ export default function OnboardingPage() {
 
       {/* STEP 3: Split-Screen Live Theme Matrix Customizer */}
       {step === 3 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 h-[calc(100vh-65px)] overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:h-[calc(100vh-65px)] min-h-[calc(100vh-65px)] overflow-y-auto lg:overflow-hidden">
           {/* Left Controls Panel */}
-          <div className="lg:col-span-5 border-r border-border p-6 overflow-y-auto space-y-6 bg-card">
+          <div className="lg:col-span-5 border-r border-border p-4 sm:p-6 overflow-y-auto space-y-6 bg-card">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />

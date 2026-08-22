@@ -394,8 +394,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top Merchant Bar */}
-      <header className="border-b border-border/80 bg-card/70 backdrop-blur-md px-6 py-4 sticky top-0 z-30">
+      {/* Top Merchant Sub-Header Bar */}
+      <div className="border-b border-border/70 bg-card/30 backdrop-blur-sm px-4 sm:px-6 py-4">
         <div className="container mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm">
@@ -451,27 +451,14 @@ export default function DashboardPage() {
                 View Live Store
               </Link>
             </Button>
-
-            {/* Logout */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                logout();
-                router.push("/");
-              }}
-            >
-              Logout
-            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Dashboard Navigation */}
       <main className="container mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-3xl bg-muted/60 p-1">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-3xl bg-muted/60 p-1 rounded-xl">
             <TabsTrigger value="overview" className="gap-1.5 text-xs">
               <TrendingUp className="h-3.5 w-3.5" />
               Overview

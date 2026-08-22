@@ -9,29 +9,39 @@ import {
   CheckCircle2,
   Database,
   DollarSign,
-  Globe,
   HardDrive,
-  Layers,
   Layout,
-  Moon,
   Palette,
   Rocket,
-  Shield,
   ShoppingBag,
   Sparkles,
   Tag,
-  Type,
-  Zap,
 } from "lucide-react";
-import { HealthCheckResponse } from "@simplestore/shared-types";
+import {
+  ColorPreset,
+  FontPairing,
+  HealthCheckResponse,
+  ThemeArchetype,
+} from "@simplestore/shared-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api-client";
+import {
+  COLOR_PRESETS,
+  FONT_PAIRINGS,
+  THEME_ARCHETYPES,
+  formatPrice,
+} from "@/lib/theme-utils";
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthCheckResponse | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
+
+  // Live Interactive Sandbox State
+  const [sandboxArchetype, setSandboxArchetype] = useState<ThemeArchetype>("minimal");
+  const [sandboxColor, setSandboxColor] = useState<ColorPreset>("indigo");
+  const [sandboxFont, setSandboxFont] = useState<FontPairing>("sans");
 
   useEffect(() => {
     async function checkHealth() {
@@ -47,127 +57,366 @@ export default function HomePage() {
     checkHealth();
   }, []);
 
+  const activeArch = THEME_ARCHETYPES[sandboxArchetype];
+  const activeCol = COLOR_PRESETS[sandboxColor];
+  const activeFnt = FONT_PAIRINGS[sandboxFont];
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto max-w-6xl flex h-16 items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black text-lg shadow-sm">
-              S
-            </div>
-            <span className="font-extrabold text-xl tracking-tight">
-              SimpleStore
-            </span>
-          </Link>
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
+      {/* 1. HERO SECTION */}
+      <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-border/40">
+        {/* Ambient Glows & Lighting */}
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[450px] bg-gradient-to-b from-primary/25 via-primary/10 to-transparent blur-[140px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute top-1/3 -right-20 w-[300px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute top-1/3 -left-20 w-[300px] h-[300px] bg-amber-500/10 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth/login">Merchant Login</Link>
-            </Button>
-            <Button size="sm" className="gap-2 shadow-sm font-semibold" asChild>
-              <Link href="/onboarding">
-                <Sparkles className="h-4 w-4" />
-                Launch Store Free
-              </Link>
-            </Button>
+        <div className="container mx-auto max-w-5xl px-4 sm:px-6 text-center space-y-6 sm:space-y-8">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 py-1.5 px-4 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-semibold shadow-sm hover:border-primary/50 transition-colors">
+            <Sparkles className="h-3.5 w-3.5 text-primary animate-spin" style={{ animationDuration: "6s" }} />
+            <span>SimpleStore • Your store. Without the complexity.</span>
           </div>
-        </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-28 border-b border-border/40">
-        {/* Glow backdrop */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
-
-        <div className="container mx-auto max-w-5xl px-4 text-center space-y-6 relative z-10">
-          <Badge
-            variant="outline"
-            className="gap-2 py-1.5 px-4 text-xs font-semibold rounded-full border-primary/30 bg-primary/5 text-primary shadow-sm"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            SimpleStore • Your store. Without the complexity.
-          </Badge>
-
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.1] max-w-3xl mx-auto">
-            Sell online in <span className="text-primary underline decoration-primary/30 decoration-wavy decoration-2">5 minutes</span> with zero effort.
+          {/* Heading */}
+          <h1 className="fluid-hero font-black tracking-tight text-foreground max-w-4xl mx-auto">
+            Sell online in{" "}
+            <span className="bg-gradient-to-r from-primary via-indigo-600 to-blue-500 bg-clip-text text-transparent underline decoration-primary/30 decoration-wavy decoration-2">
+              5 minutes
+            </span>{" "}
+            with zero effort.
           </h1>
 
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Answer 4 quick questions. Our deterministic design token matrix and AI copywriter build your storefront, catalog, and merchant dashboard instantly.
+          {/* Subtitle */}
+          <p className="fluid-body text-muted-foreground max-w-2xl mx-auto font-normal">
+            Answer 4 quick questions. Our deterministic design token matrix and AI copywriter build your custom storefront, catalog, and merchant portal in seconds.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button size="lg" className="h-12 px-8 text-base font-bold gap-2 shadow-lg" asChild>
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto h-12 px-8 text-sm font-bold gap-2.5 shadow-lg shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/95 transition-all hover:scale-[1.02]"
+              asChild
+            >
               <Link href="/onboarding">
-                <Rocket className="h-5 w-5" />
+                <Rocket className="h-4.5 w-4.5" />
                 Start 5-Minute Setup
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="h-12 px-6 text-base font-semibold" asChild>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto h-12 px-7 text-sm font-semibold border-border/80 hover:bg-muted/60 transition-all"
+              asChild
+            >
               <Link href="/dashboard">
+                <Layout className="h-4 w-4 mr-2 text-muted-foreground" />
                 Merchant Admin Portal
               </Link>
             </Button>
           </div>
+
+          {/* Trust Highlights */}
+          <div className="pt-6 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <span>No coding required</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Deterministic Design Tokens</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <span>ACID Row-Locked Inventory</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Feature Highlights: Design Matrix & Capabilities */}
-      <section className="py-16 sm:py-20 border-b border-border/40 bg-muted/20">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 space-y-12">
+      {/* 2. INTERACTIVE LIVE DESIGN MATRIX SANDBOX */}
+      <section className="py-16 sm:py-24 border-b border-border/40 bg-muted/10 relative">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Smart Frontend Architecture & Design Matrix
+            <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider text-primary border-primary/30">
+              Interactive Live Demo
+            </Badge>
+            <h2 className="fluid-h2 font-extrabold tracking-tight">
+              Test the Deterministic Design Matrix
             </h2>
             <p className="text-sm text-muted-foreground">
-              Guaranteed beautiful stores with 80+ mathematically harmonious combinations. No ugly drag-and-drop mistakes.
+              Click the styles, fonts, and colors below to see how our design engine instantly morphs the storefront in real-time.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Control Panel */}
+            <div className="lg:col-span-5 space-y-6 bg-card border border-border/80 p-6 rounded-2xl shadow-sm">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" />
+                Theme Configuration Controls
+              </h3>
+
+              {/* Archetypes */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  1. Style Archetype
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "minimal", name: "Minimal Clean", icon: "▫️" },
+                      { id: "editorial", name: "Editorial Luxury", icon: "✨" },
+                      { id: "warm", name: "Warm Organic", icon: "🌿" },
+                      { id: "bold", name: "Bold Contrast", icon: "⚡" },
+                    ] as const
+                  ).map((arch) => (
+                    <button
+                      key={arch.id}
+                      type="button"
+                      onClick={() => setSandboxArchetype(arch.id)}
+                      className={`p-2.5 rounded-xl border text-xs font-semibold text-left transition-all flex items-center gap-2 ${
+                        sandboxArchetype === arch.id
+                          ? "border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <span>{arch.icon}</span>
+                      <span>{arch.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Presets */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  2. Primary Accent Color
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: "slate", name: "Slate", bg: "bg-slate-700" },
+                      { id: "indigo", name: "Indigo", bg: "bg-indigo-600" },
+                      { id: "emerald", name: "Emerald", bg: "bg-emerald-600" },
+                      { id: "amber", name: "Amber", bg: "bg-amber-600" },
+                      { id: "rose", name: "Rose", bg: "bg-rose-600" },
+                    ] as const
+                  ).map((col) => (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => setSandboxColor(col.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                        sandboxColor === col.id
+                          ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${col.bg}`} />
+                      <span>{col.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Pairings */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  3. Typography Scale
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "sans", name: "Modern Sans" },
+                      { id: "serif", name: "Luxury Serif" },
+                      { id: "mono", name: "Technical Mono" },
+                      { id: "rounded", name: "Soft Rounded" },
+                    ] as const
+                  ).map((fnt) => (
+                    <button
+                      key={fnt.id}
+                      type="button"
+                      onClick={() => setSandboxFont(fnt.id)}
+                      className={`p-2 rounded-lg border text-xs font-semibold transition-all ${
+                        sandboxFont === fnt.id
+                          ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {fnt.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button className="w-full h-10 text-xs font-bold gap-2" asChild>
+                  <Link href="/onboarding">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Launch This Style in 5 Minutes
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Live Rendered Mock Storefront Card */}
+            <div className="lg:col-span-7">
+              <div
+                className={`p-6 sm:p-8 transition-all duration-300 border shadow-lg ${activeArch.cardClass} ${activeArch.roundedClass} ${activeFnt.bodyClass}`}
+                style={{
+                  background: sandboxArchetype === "bold" ? "#09090b" : undefined,
+                }}
+              >
+                {/* Store Header */}
+                <div className="flex items-center justify-between pb-6 border-b border-border/50">
+                  <div>
+                    <h4
+                      className={`text-xl sm:text-2xl font-black ${activeFnt.headingClass}`}
+                      style={{ color: activeCol.primary }}
+                    >
+                      Nordic Brew Roasters
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Artisan Specialty Single-Origin Roasts
+                    </p>
+                  </div>
+                  <div
+                    className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 rounded-lg text-white"
+                    style={{ backgroundColor: activeCol.primary }}
+                  >
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    <span>Cart (2)</span>
+                  </div>
+                </div>
+
+                {/* Hero Banner in Store */}
+                <div className="py-6 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Featured Collection
+                  </span>
+                  <p className="text-base sm:text-lg font-bold leading-snug">
+                    Ethically sourced coffee beans roasted fresh weekly in small batches.
+                  </p>
+                </div>
+
+                {/* Sample Product Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  {/* Product 1 */}
+                  <div className="p-4 transition-all duration-200 border rounded-xl bg-card/60">
+                    <div className="h-28 rounded-lg bg-muted/60 flex items-center justify-center text-2xl mb-3">
+                      ☕
+                    </div>
+                    <h5 className="font-bold text-sm">Ethiopian Yirgacheffe</h5>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
+                      Floral jasmine notes, bright lemon acidity.
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm">{formatPrice(18.5, "USD")}</span>
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-xs font-semibold rounded-md text-white"
+                        style={{ backgroundColor: activeCol.primary }}
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Product 2 */}
+                  <div className="p-4 transition-all duration-200 border rounded-xl bg-card/60">
+                    <div className="h-28 rounded-lg bg-muted/60 flex items-center justify-center text-2xl mb-3">
+                      🫘
+                    </div>
+                    <h5 className="font-bold text-sm">Sumatra Dark Roast</h5>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
+                      Rich cedar aroma, smoky dark chocolate body.
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm">{formatPrice(19.0, "USD")}</span>
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-xs font-semibold rounded-md text-white"
+                        style={{ backgroundColor: activeCol.primary }}
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. THREE-STEP ZERO-EFFORT WORKFLOW */}
+      <section className="py-16 sm:py-24 border-b border-border/40">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider text-primary border-primary/30">
+              Workflow
+            </Badge>
+            <h2 className="fluid-h2 font-extrabold tracking-tight">
+              From Idea to Live Store in 3 Steps
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Everything you need to sell online without touching a single line of CSS or configuring bloated plugins.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: Theme Matrix */}
-            <Card className="shadow-sm border-border/60">
+            {/* Step 1 */}
+            <Card className="glow-card border-border/70 relative">
+              <div className="absolute top-4 right-4 text-3xl font-black text-muted/30">
+                01
+              </div>
               <CardHeader>
-                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-2">
+                <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-2">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-base font-bold">
+                  Answer 4 Questions
+                </CardTitle>
+                <CardDescription className="text-xs leading-relaxed">
+                  Enter your store name, product category, and target vibe. Our integrated AI copywriter drafts starter products, descriptions, and taglines.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Step 2 */}
+            <Card className="glow-card border-border/70 relative">
+              <div className="absolute top-4 right-4 text-3xl font-black text-muted/30">
+                02
+              </div>
+              <CardHeader>
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-2">
                   <Layout className="h-5 w-5" />
                 </div>
                 <CardTitle className="text-base font-bold">
-                  4 Curated Style Archetypes
+                  Pick Your Theme Matrix
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  Minimalist, Editorial Luxury, Warm Organic, and Bold High-Contrast. Instantly switchable with zero CSS overhead.
+                <CardDescription className="text-xs leading-relaxed">
+                  Choose from 4 mathematically harmonious Archetypes (Minimal, Editorial, Warm, Bold) and curated colors. Zero layout bugs or ugly mistakes.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            {/* Card 2: Currency & Dark Mode */}
-            <Card className="shadow-sm border-border/60">
+            {/* Step 3 */}
+            <Card className="glow-card border-border/70 relative">
+              <div className="absolute top-4 right-4 text-3xl font-black text-muted/30">
+                03
+              </div>
               <CardHeader>
-                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-2">
-                  <DollarSign className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-2">
+                  <Rocket className="h-5 w-5" />
                 </div>
                 <CardTitle className="text-base font-bold">
-                  Custom Currency & Storefront Dark Mode
+                  Publish & Accept Orders
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  Sell in USD ($), INR (₹), EUR (€), GBP (£), and CAD ($). Optional visitor theme switch in header.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Card 3: Coupons & Transaction Safety */}
-            <Card className="shadow-sm border-border/60">
-              <CardHeader>
-                <div className="h-10 w-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2">
-                  <Tag className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-base font-bold">
-                  Promo Codes & ACID Checkout
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Server-side coupon validation, row-locked atomic inventory deduction, and instant demo order receipts.
+                <CardDescription className="text-xs leading-relaxed">
+                  Share your public store link (`/store/your-slug`). Customers add items to cart, use promo coupons, and complete ACID checkout with demo receipts.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -175,9 +424,89 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Live System Diagnostics Telemetry */}
-      <section className="py-12 bg-background border-b border-border/40">
-        <div className="container mx-auto max-w-4xl px-4 space-y-4">
+      {/* 4. COMPARISON MATRIX: SIMPLESTORE VS COMPLEX PLATFORMS */}
+      <section className="py-16 sm:py-24 border-b border-border/40 bg-muted/10">
+        <div className="container mx-auto max-w-5xl px-4 sm:px-6 space-y-10">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider text-primary border-primary/30">
+              Why SimpleStore?
+            </Badge>
+            <h2 className="fluid-h2 font-extrabold tracking-tight">
+              SimpleStore vs. Complex E-Commerce
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Designed for creators and small shops who want to start selling immediately without enterprise headaches.
+            </p>
+          </div>
+
+          <div className="border border-border/80 rounded-2xl overflow-hidden bg-card shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground uppercase text-[10px] tracking-wider font-bold">
+                    <th className="p-4 sm:p-5">Feature / Dimension</th>
+                    <th className="p-4 sm:p-5 text-primary font-black bg-primary/5">
+                      ✨ SimpleStore
+                    </th>
+                    <th className="p-4 sm:p-5 text-muted-foreground">
+                      Complex Platforms (Shopify / Woo)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  <tr>
+                    <td className="p-4 sm:p-5 font-semibold">Setup Time</td>
+                    <td className="p-4 sm:p-5 font-bold text-emerald-500 bg-primary/5">
+                      ⚡ Under 5 Minutes
+                    </td>
+                    <td className="p-4 sm:p-5 text-muted-foreground">Hours to days</td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-5 font-semibold">Design Reliability</td>
+                    <td className="p-4 sm:p-5 font-bold text-emerald-500 bg-primary/5">
+                      🎯 Deterministic Token Matrix (Guaranteed Gorgeous)
+                    </td>
+                    <td className="p-4 sm:p-5 text-muted-foreground">
+                      Prone to broken CSS & mismatched fonts
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-5 font-semibold">Plugin Overhead</td>
+                    <td className="p-4 sm:p-5 font-bold text-emerald-500 bg-primary/5">
+                      🚀 Zero Plugins (Built-in AI, Coupons & Themes)
+                    </td>
+                    <td className="p-4 sm:p-5 text-muted-foreground">
+                      20+ paid third-party apps and plugins
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-5 font-semibold">Inventory Safety</td>
+                    <td className="p-4 sm:p-5 font-bold text-emerald-500 bg-primary/5">
+                      🔒 PostgreSQL Row-Locking (ACID Atomic Deductions)
+                    </td>
+                    <td className="p-4 sm:p-5 text-muted-foreground">
+                      Often relies on eventual consistency
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-5 font-semibold">Currencies & Dark Mode</td>
+                    <td className="p-4 sm:p-5 font-bold text-emerald-500 bg-primary/5">
+                      🌍 Multi-Currency (USD, INR, EUR, GBP) + Dark Mode
+                    </td>
+                    <td className="p-4 sm:p-5 text-muted-foreground">
+                      Requires specialized apps or theme tweaks
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. LIVE SYSTEM INFRASTRUCTURE TELEMETRY */}
+      <section className="py-12 border-b border-border/40">
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-500 animate-pulse" />
@@ -188,7 +517,7 @@ export default function HomePage() {
             {health && (
               <Badge
                 variant="outline"
-                className={`text-[11px] font-mono gap-1 ${
+                className={`text-[11px] font-mono gap-1.5 ${
                   health.status === "healthy"
                     ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
                     : "text-amber-500 border-amber-500/30"
@@ -201,8 +530,8 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Database Status */}
-            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
+            {/* Database */}
+            <div className="rounded-xl border border-border/80 p-3.5 bg-card flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2.5">
                 <Database className="h-4 w-4 text-blue-500" />
                 <div>
@@ -217,8 +546,8 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Redis Status */}
-            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
+            {/* Redis */}
+            <div className="rounded-xl border border-border/80 p-3.5 bg-card flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2.5">
                 <HardDrive className="h-4 w-4 text-red-500" />
                 <div>
@@ -233,8 +562,8 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* AI Engine Status */}
-            <div className="rounded-lg border border-border p-3.5 bg-card flex items-center justify-between">
+            {/* AI Engine */}
+            <div className="rounded-xl border border-border/80 p-3.5 bg-card flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2.5">
                 <Bot className="h-4 w-4 text-amber-500" />
                 <div>
@@ -252,15 +581,30 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-border/40 py-8 bg-muted/20 text-center text-xs text-muted-foreground">
-        <div className="container mx-auto px-4 space-y-2">
-          <p className="font-semibold text-foreground">
-            SimpleStore — High-Performance E-Commerce Portfolio Application
+      {/* 6. BOTTOM CALL TO ACTION */}
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-primary/5 via-background to-background text-center relative overflow-hidden">
+        <div className="container mx-auto max-w-4xl px-4 space-y-6">
+          <h2 className="fluid-h2 font-black tracking-tight">
+            Ready to launch your store today?
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
+            Join small business owners and creators who launch custom storefronts with zero complexity.
           </p>
-          <p>Next.js 14 • FastAPI • PostgreSQL • Redis • Sarvam AI</p>
+          <div className="pt-2">
+            <Button
+              size="lg"
+              className="h-12 px-8 font-bold gap-2 text-sm shadow-xl shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
+              asChild
+            >
+              <Link href="/onboarding">
+                <Sparkles className="h-4 w-4" />
+                Start Your Store Setup Free
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
-      </footer>
+      </section>
     </div>
   );
 }
