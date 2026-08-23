@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.dependencies import get_current_user, get_db
-from app.orders.schemas import OrderCreateRequest, OrderResponse, OrderStatusUpdateRequest
+from app.orders.schemas import (
+    InvoiceResponse,
+    OrderCreateRequest,
+    OrderResponse,
+    OrderStatusUpdateRequest,
+)
 from app.orders.service import order_service
 
 router = APIRouter(tags=["Orders"])
@@ -55,6 +60,20 @@ async def get_order(
     return await order_service.get_order_by_id(db, order_id)
 
 
+@router.get(
+    "/orders/{order_id}/invoice",
+    response_model=InvoiceResponse,
+    summary="Generate invoice for order",
+)
+async def get_order_invoice(
+    order_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch structured invoice data for an order."""
+    return await order_service.generate_invoice(db, order_id, current_user.id)
+
+
 @router.patch(
     "/orders/{order_id}/status",
     response_model=OrderResponse,
@@ -66,5 +85,5 @@ async def update_order_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update order status (e.g. pending -> fulfilled)."""
+    """Update order status (e.g. pending -> processing -> completed)."""
     return await order_service.update_order_status(db, order_id, current_user.id, request)

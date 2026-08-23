@@ -2,7 +2,7 @@
  * Type-safe API Client for SimpleStore Backend
  */
 
-import { HealthCheckResponse } from "@simplestore/shared-types";
+import { BlobUploadResponse, HealthCheckResponse } from "@simplestore/shared-types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -129,6 +129,30 @@ export const apiClient = {
     }),
   delete: <T>(endpoint: string, options?: TokenOrOptions) =>
     request<T>(endpoint, { ...normalizeOptions(options), method: "DELETE" }),
+
+  // Vercel Blob / Static File Upload
+  uploadBlob: async (file: File): Promise<BlobUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const url = `${API_BASE_URL}/api/v1/uploads/blob`;
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { detail: response.statusText };
+      }
+      throw new ApiError(response.status, extractErrorMessage(errorData, response.statusText, response.status));
+    }
+
+    return await response.json();
+  },
 
   // Specific domain helpers
   health: {

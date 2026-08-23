@@ -13,6 +13,7 @@ class ThemeConfigSchema(BaseModel):
     color_preset: str = "slate"  # slate, indigo, emerald, amber, rose
     enable_dark_mode_toggle: bool = True
     hero_style: str = "centered"
+    custom_images: list[str] | None = None
 
 
 class StoreCreateRequest(BaseModel):
@@ -22,10 +23,13 @@ class StoreCreateRequest(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    banner_url: str | None = None
     currency: str = Field("USD", min_length=3, max_length=3)
     language: str = Field("en", min_length=2, max_length=10)
     theme_config: ThemeConfigSchema | None = None
     onboarding_context: dict[str, Any] | None = None
+    is_active: bool = True
+    published: bool = True
 
 
 class StoreUpdateRequest(BaseModel):
@@ -34,10 +38,12 @@ class StoreUpdateRequest(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    banner_url: str | None = None
     currency: str | None = Field(None, min_length=3, max_length=3)
     language: str | None = Field(None, min_length=2, max_length=10)
     theme_config: ThemeConfigSchema | None = None
     onboarding_context: dict[str, Any] | None = None
+    is_active: bool | None = None
     published: bool | None = None
 
 
@@ -50,11 +56,13 @@ class StoreResponse(BaseModel):
     tagline: str | None = None
     description: str | None = None
     logo_url: str | None = None
+    banner_url: str | None = None
     currency: str
     language: str
     theme_config: dict[str, Any]
     onboarding_context: dict[str, Any] | None = None
-    published: bool
+    is_active: bool = True
+    published: bool = True
     created_at: datetime
     updated_at: datetime
 

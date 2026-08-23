@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
+# Engine configuration
+connect_args = {}
+if "ssl=" in settings.async_database_url or "neon.tech" in settings.async_database_url:
+    connect_args["ssl"] = True
+
 # Async Engine for PostgreSQL
 engine = create_async_engine(
     settings.async_database_url,
@@ -14,6 +19,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args=connect_args,
 )
 
 # Async Session Factory

@@ -23,6 +23,11 @@ class Order(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
     )
+    order_number: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+    )
     store_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("stores.id", ondelete="RESTRICT"),
@@ -69,6 +74,11 @@ class Order(Base, TimestampMixin):
         default="USD",
         nullable=False,
     )
+    payment_method: Mapped[str] = mapped_column(
+        String(32),
+        default="COD",
+        nullable=False,
+    )
     status: Mapped[str] = mapped_column(
         String(50),
         default="pending",
@@ -77,7 +87,7 @@ class Order(Base, TimestampMixin):
     )
     payment_status: Mapped[str] = mapped_column(
         String(50),
-        default="demo_paid",
+        default="pending",
         nullable=False,
     )
 
@@ -112,7 +122,10 @@ class OrderItem(Base):
         ForeignKey("products.id", ondelete="SET NULL"),
         nullable=True,
     )
-    # Historical snapshots of product data at moment of purchase
+    product_code: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
     product_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -128,6 +141,10 @@ class OrderItem(Base):
     subtotal: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
+    )
+    image_url: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
     )
 
     # Relationships

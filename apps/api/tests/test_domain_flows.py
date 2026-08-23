@@ -1,4 +1,4 @@
-"""Integration tests for Store, Product, Coupon, and Order workflows."""
+"""Integration tests for Store, Product, Coupon, Inventory, and Order workflows."""
 
 import pytest
 from httpx import AsyncClient
@@ -58,14 +58,16 @@ async def test_store_creation_and_public_retrieval(
     assert store_data["currency"] == "USD"
     store_id = store_data["id"]
 
-    # 2. Add a product to the store
+    # 2. Add a product to the store with MRP and images
     prod_payload = {
         "name": "Lavender & Sage Candle",
         "slug": "lavender-sage-candle",
         "description": "Calming aroma made with pure essential oils.",
+        "mrp": 32.00,
         "price": 24.50,
         "currency": "USD",
         "inventory": 10,
+        "images": ["https://example.com/candle1.jpg", "https://example.com/candle2.jpg"],
         "published": True,
     }
     prod_res = await client.post(
@@ -74,7 +76,10 @@ async def test_store_creation_and_public_retrieval(
         headers=auth_headers,
     )
     assert prod_res.status_code == 201
-    assert "id" in prod_res.json()
+    prod_json = prod_res.json()
+    assert "id" in prod_json
+    assert prod_json["product_code"].startswith("PROD-")
+    assert len(prod_json["images"]) == 2
 
     # 3. Publish the store
     pub_res = await client.post(f"/api/v1/stores/{store_id}/publish", headers=auth_headers)
@@ -110,6 +115,7 @@ async def test_order_creation_and_inventory_atomic_deduction(
         json={
             "name": "Matcha Green Tea",
             "slug": "matcha-green-tea",
+            "mrp": 38.00,
             "price": 30.00,
             "inventory": 5,
             "published": True,
@@ -118,26 +124,34 @@ async def test_order_creation_and_inventory_atomic_deduction(
     )
     product_id = prod_res.json()["id"]
 
-    # 3. Create 10% Discount Coupon
+    # 3. Create 10% Discount Coupon with Suggestions
     coupon_res = await client.post(
         f"/api/v1/stores/{store_id}/coupons",
         json={
             "code": "TEALOVER10",
             "discount_type": "percentage",
             "discount_value": 10.0,
+            "show_in_suggestions": True,
             "is_active": True,
         },
         headers=auth_headers,
     )
     assert coupon_res.status_code == 201
 
-    # 4. Place Customer Order for 2 items with Coupon
+    # Check coupon suggestions endpoint
+    sugg_res = await client.get(f"/api/v1/stores/{store_id}/coupons/suggestions")
+    assert sugg_res.status_code == 200
+    assert len(sugg_res.json()) == 1
+    assert sugg_res.json()[0]["code"] == "TEALOVER10"
+
+    # 4. Place Customer Order for 2 items with Coupon & COD
     order_payload = {
         "customer_name": "Jane Doe",
         "customer_email": "jane@example.com",
         "customer_phone": "+1234567890",
         "shipping_address": "123 Green St, Portland OR",
         "coupon_code": "TEALOVER10",
+        "payment_method": "COD",
         "items": [{"product_id": product_id, "quantity": 2}],
     }
     order_res = await client.post(f"/api/v1/stores/{store_id}/orders", json=order_payload)
@@ -149,8 +163,39 @@ async def test_order_creation_and_inventory_atomic_deduction(
     assert float(order_data["discount_amount"]) == 6.00
     assert float(order_data["total_amount"]) == 54.00
     assert order_data["coupon_code"] == "TEALOVER10"
-    assert order_data["payment_status"] == "demo_paid"
+    assert order_data["payment_method"] == "COD"
+    assert order_data["payment_status"] == "pending"
+    assert order_data["order_number"].startswith("ORD-")
+    order_id = order_data["id"]
 
     # 5. Verify inventory decremented from 5 to 3
     get_prod = await client.get(f"/api/v1/products/{product_id}")
     assert get_prod.json()["inventory"] == 3
+
+    # 6. Verify invoice generation
+    inv_res = await client.get(f"/api/v1/orders/{order_id}/invoice", headers=auth_headers)
+    assert inv_res.status_code == 200
+    inv_data = inv_res.json()
+    assert inv_data["invoice_number"].startswith("INV-")
+    assert inv_data["store"]["name"] == "Tea Haven"
+
+    # 7. Test batch inventory update endpoint
+    batch_res = await client.patch(
+        f"/api/v1/stores/{store_id}/inventory/batch",
+        json={
+            "updates": [
+                {
+                    "product_id": product_id,
+                    "inventory": 25,
+                    "inventory_display_limit": 10,
+                    "order_limit": 3,
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert batch_res.status_code == 200
+    updated_prods = batch_res.json()
+    assert updated_prods[0]["inventory"] == 25
+    assert updated_prods[0]["inventory_display_limit"] == 10
+    assert updated_prods[0]["order_limit"] == 3

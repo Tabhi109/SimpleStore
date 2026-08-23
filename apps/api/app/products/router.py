@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.dependencies import get_current_user, get_db
-from app.products.schemas import ProductCreateRequest, ProductResponse, ProductUpdateRequest
+from app.products.schemas import (
+    BatchInventoryUpdateRequest,
+    ProductCreateRequest,
+    ProductResponse,
+    ProductUpdateRequest,
+)
 from app.products.service import product_service
 
 router = APIRouter(tags=["Products"])
@@ -41,6 +46,21 @@ async def get_store_products(
 ):
     """List products in a merchant store."""
     return await product_service.get_store_products(db, store_id, current_user.id)
+
+
+@router.patch(
+    "/stores/{store_id}/inventory/batch",
+    response_model=list[ProductResponse],
+    summary="Batch update inventory quantities & limits",
+)
+async def batch_update_inventory(
+    store_id: uuid.UUID,
+    request: BatchInventoryUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Batch update inventory numbers for inline table editing."""
+    return await product_service.update_inventory_batch(db, store_id, current_user.id, request)
 
 
 @router.get(

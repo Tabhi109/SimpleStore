@@ -50,14 +50,14 @@ export function OrderConfirmationModal({
               <div>
                 <p className="text-muted-foreground">{t.orderNumber}</p>
                 <p className="font-mono font-bold text-sm text-foreground">
-                  #{order.id.slice(0, 8).toUpperCase()}
+                  {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-muted-foreground">{t.orderStatus}</p>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
                   <PackageCheck className="h-3 w-3" />
-                  {order.payment_status}
+                  {order.payment_method === "COD" ? "COD • Pending Delivery" : "Paid"}
                 </span>
               </div>
             </div>
@@ -74,7 +74,7 @@ export function OrderConfirmationModal({
               </div>
               {order.shipping_address && (
                 <div className="col-span-2">
-                  <span className="font-semibold text-foreground">Ship To: </span>
+                  <span className="font-semibold text-foreground">Delivery Address: </span>
                   {order.shipping_address}
                 </div>
               )}
@@ -110,7 +110,7 @@ export function OrderConfirmationModal({
                 </div>
               )}
               <div className="flex justify-between font-bold text-sm text-foreground pt-1">
-                <span>{t.total} Paid</span>
+                <span>{t.total} Due on Delivery</span>
                 <span>{formatPrice(Number(order.total_amount), currency)}</span>
               </div>
             </div>
@@ -119,13 +119,13 @@ export function OrderConfirmationModal({
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="flex-1 gap-1.5"
+              className="flex-1 gap-1.5 font-semibold text-xs"
               onClick={() => window.print()}
             >
               <Printer className="h-4 w-4" />
               Print Receipt
             </Button>
-            <Button className="flex-1" onClick={onClose}>
+            <Button className="flex-1 font-semibold text-xs" onClick={onClose}>
               {t.continueShopping}
             </Button>
           </div>

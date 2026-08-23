@@ -6,7 +6,17 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
@@ -30,6 +40,11 @@ class Product(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
+    product_code: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -40,6 +55,10 @@ class Product(Base, TimestampMixin):
     )
     description: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+    )
+    mrp: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
         nullable=True,
     )
     price: Mapped[Decimal] = mapped_column(
@@ -56,13 +75,31 @@ class Product(Base, TimestampMixin):
         default=0,
         nullable=False,
     )
+    inventory_display_limit: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    order_limit: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
     image_url: Mapped[str | None] = mapped_column(
-        String(512),
+        String(1024),
+        nullable=True,
+    )
+    images: Mapped[list | None] = mapped_column(
+        JSON,
+        default=list,
         nullable=True,
     )
     is_ai_generated: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
         nullable=False,
     )
     published: Mapped[bool] = mapped_column(

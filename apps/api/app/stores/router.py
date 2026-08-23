@@ -149,3 +149,17 @@ async def toggle_publish(
 ):
     """Toggle whether store is published publicly."""
     return await store_service.toggle_publish(db, store_id, current_user.id)
+
+
+@router.post(
+    "/{store_id}/claim",
+    response_model=StoreResponse,
+    summary="Claim ownership of an onboarding store",
+)
+async def claim_store(
+    store_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Claim ownership of an onboarding store to current user."""
+    return await store_service.claim_store(db, store_id, current_user.id)

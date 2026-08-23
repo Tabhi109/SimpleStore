@@ -21,6 +21,9 @@ COPY apps/web ./apps/web
 COPY package.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
+
 WORKDIR /app/apps/web
 RUN npm run build
 
@@ -30,6 +33,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

@@ -29,61 +29,36 @@ test.describe("SimpleStore End-to-End User Journey", () => {
     await expect(page.locator("html")).not.toHaveClass(/dark/);
   });
 
-  test("Merchant can navigate to onboarding and generate a store", async ({ page }) => {
+  test("Merchant can navigate onboarding, use Auth Gate modal, and launch store", async ({ page }) => {
     await page.goto("/onboarding");
     await expect(page.getByText("Tell us about your store")).toBeVisible();
 
     // Fill questionnaire
     const timestamp = Date.now();
-    await page.fill("#sname", `Artisan Roasters ${timestamp}`);
-    await page.fill("#scat", "Specialty Dark Roast Coffee");
-    await page.fill("#sprod", "Handcrafted single-origin coffee beans roasted weekly.");
-    await page.fill("#memail", `merchant-${timestamp}@example.com`);
+    await page.fill("#sname", `Artisan Candles ${timestamp}`);
+    await page.fill("#scat", "Handmade Scented Candles");
+    await page.fill("#sprod", "Organic soy wax candles infused with lavender and amber.");
 
     // Click Generate Button
-    await page.click("button:has-text('Generate My Store with AI')");
+    await page.click("button:has-text('Generate Sample Preview')");
 
     // Wait for AI generation & theme matrix split screen
     await expect(page.getByText(/Theme & Design Matrix/i)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/Live Storefront Preview/i)).toBeVisible();
 
-    // Toggle Style Archetype to Editorial
-    await page.click("button:has-text('Editorial')");
-    // Toggle Color Preset
-    await page.click("button:has-text('Emerald')");
+    // Click Save & Launch Store -> Opens Auth Gate Modal
+    await page.click("button:has-text('Save & Launch My Store')");
+    await expect(page.getByText(/Create Account to Claim Store/i)).toBeVisible();
 
-    // Launch & Publish Store
-    await page.click("button:has-text('Launch & Publish Store')");
+    // Fill Auth Gate Modal registration form
+    await page.fill("input[placeholder='merchant@example.com']", `merchant-${timestamp}@example.com`);
+    await page.fill("input[placeholder='••••••••']", "Password123!");
+    await page.click("button:has-text('Create Account & Launch Store')");
 
-    // Should redirect to public storefront
-    await expect(page).toHaveURL(/.*\/store\/.*/, { timeout: 10000 });
-    await expect(page.getByText("All Products")).toBeVisible();
-
-    // Add first product to cart
-    const addToCartBtn = page.locator("button:has-text('Add to Cart')").first();
-    await addToCartBtn.click();
-
-    // Open Cart Drawer
-    await expect(page.getByRole("heading", { name: "Your Cart" })).toBeVisible();
-    await expect(page.getByText(/Subtotal/i)).toBeVisible();
-
-    // Click Checkout
-    await page.click("button:has-text('Checkout')");
-
-    // Fill customer checkout details
-    await expect(page.getByText("Instant Demo Confirmation")).toBeVisible();
-    await page.fill("#name", "Alice Customer");
-    await page.fill("#email", "alice@example.com");
-    await page.fill("#phone", "+1 555 123 4567");
-    await page.fill("#address", "Seattle, WA, USA");
-
-    // Place Order
-    await page.click("button:has-text('Place Order')");
-
-    // Verify Order Confirmed Receipt Modal
-    await expect(page.getByText("Order Confirmed!")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Thank you for your purchase.")).toBeVisible();
-    await expect(page.getByText("Order Number")).toBeVisible();
-    await expect(page.getByText("Alice Customer")).toBeVisible();
+    // Should redirect to Merchant Dashboard Hub
+    await expect(page).toHaveURL(/.*\/dashboard.*/, { timeout: 15000 });
+    await expect(page.getByText(`Artisan Candles ${timestamp}`)).toBeVisible();
+    await expect(page.getByText(/Website Status/i)).toBeVisible();
+    await expect(page.getByText(/Live & Active/i)).toBeVisible();
   });
 });

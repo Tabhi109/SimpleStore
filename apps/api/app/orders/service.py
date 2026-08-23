@@ -1,16 +1,24 @@
 """Order domain service with ACID transaction guarantees and server-side pricing recalculation."""
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.coupons.models import Coupon
 from app.coupons.service import coupon_service
 from app.orders.models import Order, OrderItem
-from app.orders.schemas import OrderCreateRequest, OrderStatusUpdateRequest
+from app.orders.schemas import (
+    InvoiceResponse,
+    InvoiceStoreDetails,
+    OrderCreateRequest,
+    OrderResponse,
+    OrderStatusUpdateRequest,
+)
 from app.products.models import Product
 from app.stores.service import store_service
 
@@ -62,12 +70,18 @@ class OrderService:
                 detail="One or more products are invalid or do not belong to this store.",
             )
 
-        # 3. Verify stock and calculate subtotal using server-side prices
+        # 3. Verify stock, limits, and calculate subtotal using server-side prices
         subtotal_amount = Decimal("0.00")
         order_items_to_create: list[OrderItem] = []
 
         for p_id, requested_qty in product_qty_map.items():
             product = products[p_id]
+            if product.order_limit and requested_qty > product.order_limit:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Order limit of {product.order_limit} exceeded for '{product.name}'.",
+                )
+
             if product.inventory < requested_qty:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,10 +97,12 @@ class OrderService:
             order_items_to_create.append(
                 OrderItem(
                     product_id=product.id,
+                    product_code=product.product_code,
                     product_name=product.name,
                     quantity=requested_qty,
                     unit_price=product.price,
                     subtotal=item_subtotal,
+                    image_url=product.image_url,
                 )
             )
 
@@ -101,11 +117,26 @@ class OrderService:
             if is_valid:
                 discount_amount = disc
                 applied_coupon_code = request.coupon_code.upper().strip()
+                # Increment usage count
+                coup_res = await db.execute(
+                    select(Coupon).where(
+                        Coupon.store_id == store_id, Coupon.code == applied_coupon_code
+                    )
+                )
+                coup = coup_res.scalar_one_or_none()
+                if coup:
+                    coup.usage_count += 1
 
         total_amount = max(Decimal("0.00"), subtotal_amount - discount_amount)
 
-        # 5. Create Order
+        # 5. Generate Order Number
+        count_res = await db.execute(select(func.count(Order.id)).where(Order.store_id == store_id))
+        total_store_orders = count_res.scalar_one() or 0
+        order_number = f"ORD-{(total_store_orders + 1001):04d}"
+
+        # 6. Create Order
         new_order = Order(
+            order_number=order_number,
             store_id=store_id,
             customer_name=request.customer_name,
             customer_email=request.customer_email.lower(),
@@ -116,8 +147,9 @@ class OrderService:
             total_amount=total_amount,
             coupon_code=applied_coupon_code,
             currency=store.currency,
+            payment_method=request.payment_method or "COD",
             status="pending",
-            payment_status="demo_paid",
+            payment_status="pending" if request.payment_method == "COD" else "paid",
         )
         db.add(new_order)
         await db.flush()
@@ -127,7 +159,7 @@ class OrderService:
             item.order_id = new_order.id
             db.add(item)
 
-        # 6. Commit Transaction
+        # 7. Commit Transaction
         await db.commit()
         await db.refresh(new_order)
 
@@ -183,9 +215,34 @@ class OrderService:
         """Update order fulfillment status."""
         order = await self.get_order_by_id(db, order_id, owner_id=owner_id)
         order.status = request.status
+        if request.status == "completed":
+            order.payment_status = "paid"
         await db.commit()
         await db.refresh(order)
         return order
+
+    async def generate_invoice(
+        self,
+        db: AsyncSession,
+        order_id: uuid.UUID,
+        owner_id: uuid.UUID,
+    ) -> InvoiceResponse:
+        """Generate structured invoice data for an order."""
+        order = await self.get_order_by_id(db, order_id, owner_id=owner_id)
+        store = await store_service.get_store_by_id(db, order.store_id, owner_id=owner_id)
+
+        return InvoiceResponse(
+            invoice_number=f"INV-{order.order_number}",
+            order=OrderResponse.model_validate(order),
+            store=InvoiceStoreDetails(
+                name=store.name,
+                slug=store.slug,
+                category=store.category,
+                tagline=store.tagline,
+                currency=store.currency,
+            ),
+            issued_at=datetime.now(UTC),
+        )
 
 
 order_service = OrderService()

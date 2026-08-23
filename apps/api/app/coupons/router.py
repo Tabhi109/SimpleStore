@@ -10,6 +10,8 @@ from app.core.dependencies import get_current_user, get_db
 from app.coupons.schemas import (
     CouponCreateRequest,
     CouponResponse,
+    CouponUpdateRequest,
+    SuggestedCouponResponse,
     ValidateCouponRequest,
     ValidateCouponResponse,
 )
@@ -37,7 +39,7 @@ async def create_coupon(
 @router.get(
     "/stores/{store_id}/coupons",
     response_model=list[CouponResponse],
-    summary="List store coupons",
+    summary="List store coupons for merchant",
 )
 async def list_coupons(
     store_id: uuid.UUID,
@@ -46,6 +48,58 @@ async def list_coupons(
 ):
     """List coupons in merchant store."""
     return await coupon_service.get_store_coupons(db, store_id, current_user.id)
+
+
+@router.get(
+    "/stores/{store_id}/coupons/suggestions",
+    response_model=list[SuggestedCouponResponse],
+    summary="Get public suggested coupon pills for checkout",
+)
+async def get_suggested_coupons(
+    store_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get active featured coupons for shopper checkout pills."""
+    coupons = await coupon_service.get_suggested_coupons(db, store_id)
+    return [
+        SuggestedCouponResponse(
+            code=c.code,
+            discount_type=c.discount_type,
+            discount_value=c.discount_value,
+            min_order_value=c.min_order_value,
+        )
+        for c in coupons
+    ]
+
+
+@router.patch(
+    "/coupons/{coupon_id}",
+    response_model=CouponResponse,
+    summary="Update a coupon",
+)
+async def update_coupon(
+    coupon_id: uuid.UUID,
+    request: CouponUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update coupon fields or toggle active/inactive."""
+    return await coupon_service.update_coupon(db, coupon_id, current_user.id, request)
+
+
+@router.delete(
+    "/coupons/{coupon_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a coupon",
+)
+async def delete_coupon(
+    coupon_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a coupon."""
+    await coupon_service.delete_coupon(db, coupon_id, current_user.id)
+    return None
 
 
 @router.post(

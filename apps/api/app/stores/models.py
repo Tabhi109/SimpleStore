@@ -66,7 +66,11 @@ class Store(Base, TimestampMixin):
         nullable=True,
     )
     logo_url: Mapped[str | None] = mapped_column(
-        String(512),
+        String(1024),
+        nullable=True,
+    )
+    banner_url: Mapped[str | None] = mapped_column(
+        String(1024),
         nullable=True,
     )
     currency: Mapped[str] = mapped_column(
@@ -90,9 +94,14 @@ class Store(Base, TimestampMixin):
     )
     published: Mapped[bool] = mapped_column(
         Boolean,
-        default=False,
+        default=True,
         nullable=False,
         index=True,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
     )
 
     # Relationships

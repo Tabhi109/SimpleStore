@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowRight, Minus, Plus, ShoppingBag, Tag, Trash2, X } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Sparkles, Tag, Trash2, X } from "lucide-react";
 import { StoreCurrency, StoreLanguage } from "@simplestore/shared-types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/features/cart/cart-store";
 import { apiClient } from "@/lib/api-client";
 import { formatPrice, TRANSLATIONS } from "@/lib/theme-utils";
+
+interface SuggestedCoupon {
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  min_order_value?: number | null;
+}
 
 interface CartDrawerProps {
   storeId: string;
@@ -39,13 +47,31 @@ export function CartDrawer({
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [suggestedCoupons, setSuggestedCoupons] = useState<SuggestedCoupon[]>([]);
 
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const subtotal = getSubtotal();
   const total = getTotal();
 
-  const handleApplyCoupon = async () => {
-    if (!inputCoupon.trim()) return;
+  // Fetch suggested coupon pills
+  useEffect(() => {
+    if (!isOpen || !storeId) return;
+
+    async function loadSuggestions() {
+      try {
+        const data = await apiClient.get<SuggestedCoupon[]>(
+          `/stores/${storeId}/coupons/suggestions`
+        );
+        setSuggestedCoupons(data || []);
+      } catch {
+        // ignore
+      }
+    }
+    loadSuggestions();
+  }, [isOpen, storeId]);
+
+  const applyCouponCode = async (codeToApply: string) => {
+    if (!codeToApply.trim()) return;
     setIsValidatingCoupon(true);
     setCouponError(null);
     setCouponSuccess(null);
@@ -57,12 +83,12 @@ export function CartDrawer({
         final_total: number;
         message: string;
       }>(`/stores/${storeId}/coupons/validate`, {
-        code: inputCoupon.trim(),
+        code: codeToApply.trim(),
         cart_total: subtotal,
       });
 
       if (res.valid) {
-        setCoupon(inputCoupon.trim().toUpperCase(), res.discount_amount);
+        setCoupon(codeToApply.trim().toUpperCase(), res.discount_amount);
         setCouponSuccess(res.message || "Coupon applied!");
         setInputCoupon("");
       } else {
@@ -192,7 +218,7 @@ export function CartDrawer({
         {items.length > 0 && (
           <div className="border-t border-border pt-4 space-y-4">
             {/* Coupon Code Section */}
-            <div>
+            <div className="space-y-2">
               {couponCode ? (
                 <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2 text-xs">
                   <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -207,22 +233,49 @@ export function CartDrawer({
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={t.couponPlaceholder}
-                    value={inputCoupon}
-                    onChange={(e) => setInputCoupon(e.target.value)}
-                    className="h-9 text-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 shrink-0 text-xs"
-                    onClick={handleApplyCoupon}
-                    disabled={isValidatingCoupon || !inputCoupon.trim()}
-                  >
-                    {isValidatingCoupon ? "..." : t.applyCoupon}
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={t.couponPlaceholder}
+                      value={inputCoupon}
+                      onChange={(e) => setInputCoupon(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 shrink-0 text-xs font-semibold"
+                      onClick={() => applyCouponCode(inputCoupon)}
+                      disabled={isValidatingCoupon || !inputCoupon.trim()}
+                    >
+                      {isValidatingCoupon ? "..." : t.applyCoupon}
+                    </Button>
+                  </div>
+
+                  {/* Featured One-Click Coupon Suggestion Pills */}
+                  {suggestedCoupons.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-amber-500" />
+                        Available Promo Offers:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestedCoupons.map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => applyCouponCode(c.code)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-all"
+                          >
+                            <span>{c.code}</span>
+                            <span className="text-[9px] font-sans opacity-80">
+                              ({c.discount_type === "percentage" ? `${c.discount_value}% OFF` : `FLAT`})
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {couponError && (

@@ -1,5 +1,7 @@
 """Application configuration and settings using Pydantic Settings."""
 
+import re
+
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -37,9 +39,30 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None
     DATABASE_SYNC_URL: str | None = None
+    NEON_DB_URL: str | None = None
 
     @computed_field
     def async_database_url(self) -> str:
+        if self.NEON_DB_URL:
+            # Convert postgresql:// to postgresql+asyncpg:// and normalize query params for asyncpg
+            url = self.NEON_DB_URL.strip().strip('"').strip("'")
+            if url.startswith("postgresql://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif not url.startswith("postgresql+asyncpg://"):
+                url = f"postgresql+asyncpg://{url}"
+
+            # Remove unsupported sync query parameters like channel_binding, sslmode for asyncpg
+            url = re.sub(r"[?&]channel_binding=[^&]*", "", url)
+            url = re.sub(r"[?&]sslmode=[^&]*", "", url)
+            # Ensure ssl is preserved or passed cleanly
+            if "?" in url and not url.endswith("?"):
+                url = f"{url}&ssl=require" if "ssl=" not in url else url
+            elif "?" in url and url.endswith("?"):
+                url = f"{url}ssl=require"
+            else:
+                url = f"{url}?ssl=require"
+            return url
+
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return (
@@ -49,6 +72,12 @@ class Settings(BaseSettings):
 
     @computed_field
     def sync_database_url(self) -> str:
+        if self.NEON_DB_URL:
+            url = self.NEON_DB_URL.strip().strip('"').strip("'")
+            if url.startswith("postgresql+asyncpg://"):
+                url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            return url
+
         if self.DATABASE_SYNC_URL:
             return self.DATABASE_SYNC_URL
         return (
@@ -72,8 +101,9 @@ class Settings(BaseSettings):
     SARVAM_API_URL: str = "https://api.sarvam.ai"
     SARVAM_MODEL: str = "sarvam-2b"
 
-    # Storage
+    # Storage (Vercel Blob / S3 / Local)
     STORAGE_PROVIDER: str = "local"
+    BLOB_READ_WRITE_TOKEN: str | None = None
     S3_BUCKET_NAME: str = "simplestore-uploads"
     S3_REGION: str = "us-east-1"
     S3_ENDPOINT_URL: str | None = None

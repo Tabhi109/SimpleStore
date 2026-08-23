@@ -23,6 +23,8 @@ class StarterProductSuggestion(BaseModel):
     description: str
     suggested_price: float
     inventory: int = 10
+    image_url: str | None = None
+    images: list[str] = []
 
 
 class OnboardingGenerationResult(BaseModel):
@@ -105,6 +107,8 @@ class AIService:
                             description=p.get("description", "Crafted with premium materials."),
                             suggested_price=float(p.get("suggested_price", 29.0)),
                             inventory=int(p.get("inventory", 15)),
+                            image_url=p.get("image_url", "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600"),
+                            images=[p.get("image_url", "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600")],
                         )
                         for p in parsed.get("starter_products", [])
                     ],
@@ -135,12 +139,16 @@ class AIService:
                     description=f"Our flagship handcrafted {input_data.category.lower()}, made with exceptional attention to detail.",
                     suggested_price=35.00,
                     inventory=20,
+                    image_url="https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600",
+                    images=["https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600"],
                 ),
                 StarterProductSuggestion(
                     name=f"Essential {input_data.category} Set",
                     description=f"A curated starter pack featuring our most loved {input_data.category.lower()} essentials.",
                     suggested_price=55.00,
                     inventory=15,
+                    image_url="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600",
+                    images=["https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600"],
                 ),
             ],
         )

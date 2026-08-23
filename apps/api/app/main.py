@@ -2,12 +2,14 @@
 
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +28,7 @@ from app.orders.models import Order, OrderItem  # noqa: F401
 from app.orders.router import router as orders_router
 from app.products.models import Product  # noqa: F401
 from app.products.router import router as products_router
+from app.storage.router import router as uploads_router
 from app.stores.models import Store  # noqa: F401
 from app.stores.router import router as stores_router
 
@@ -41,6 +44,9 @@ logger = logging.getLogger("simplestore")
 async def lifespan(app: FastAPI):
     """Application lifespan events (startup & shutdown) with connection retries."""
     logger.info(f"Starting {settings.APP_NAME} in [{settings.ENVIRONMENT}] mode...")
+
+    # Ensure uploads directory exists
+    os.makedirs(os.path.join(os.getcwd(), "uploads"), exist_ok=True)
 
     # Retry database connection & create schema if needed
     max_retries = 5
@@ -78,6 +84,11 @@ app = FastAPI(
 
 # Attach Middlewares
 setup_middleware(app)
+
+# Static Files for Local Uploads
+upload_dir = os.path.join(os.getcwd(), "uploads")
+os.makedirs(upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 # Root API v1 Router
 api_v1_router = APIRouter(prefix=settings.API_V1_STR)
@@ -124,11 +135,16 @@ async def health_check(
         "timestamp": datetime.now(UTC).isoformat(),
         "database": {
             "connected": db_connected,
+            "provider": "Neon Serverless" if settings.NEON_DB_URL else "Local PostgreSQL",
             "latency_ms": db_latency_ms,
         },
         "redis": {
             "connected": redis_connected,
             "latency_ms": redis_latency_ms,
+        },
+        "storage_provider": {
+            "type": "Vercel Blob" if settings.BLOB_READ_WRITE_TOKEN else "Local Disk",
+            "configured": bool(settings.BLOB_READ_WRITE_TOKEN),
         },
         "ai_provider": {
             "configured": ai_provider.is_configured,
@@ -144,6 +160,7 @@ api_v1_router.include_router(stores_router)
 api_v1_router.include_router(products_router)
 api_v1_router.include_router(coupons_router)
 api_v1_router.include_router(orders_router)
+api_v1_router.include_router(uploads_router)
 api_v1_router.include_router(ai_router)
 
 # Mount API v1 into app

@@ -9,14 +9,18 @@ import {
   CheckCircle2,
   DollarSign,
   Globe,
+  KeyRound,
   Layout,
   Loader2,
+  Lock,
+  Mail,
   Moon,
   Palette,
   Rocket,
   ShoppingBag,
   Sparkles,
   Type,
+  User as UserIcon,
 } from "lucide-react";
 import {
   ColorPreset,
@@ -33,6 +37,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StorefrontView } from "@/components/storefront/storefront-view";
@@ -47,34 +59,41 @@ import {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { setAuth, setActiveStore, user, token } = useAuthStore();
+  const { setAuth, setActiveStore, user, token, isAuthenticated } = useAuthStore();
 
-  // Wizard Steps: 1 = Form, 2 = AI Generating, 3 = Split-screen Customizer, 4 = Finalizing
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  // Wizard Steps: 1 = Form, 2 = AI Generating, 3 = Split-screen Customizer
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Merchant Inputs
-  const [storeName, setStoreName] = useState("Nordic Brew Roasters");
-  const [category, setCategory] = useState("Artisan Specialty Coffee");
-  const [vibe, setVibe] = useState<ThemeArchetype>("minimal");
+  const [storeName, setStoreName] = useState("Velvet & Flame Candles");
+  const [category, setCategory] = useState("Handmade Scented Candles");
+  const [vibe, setVibe] = useState<ThemeArchetype>("editorial");
   const [productSummary, setProductSummary] = useState(
-    "Single-origin ethically sourced coffee beans roasted in micro-batches."
-  );
-  const [merchantEmail, setMerchantEmail] = useState(
-    user?.email || "owner@nordicbrew.com"
+    "Organic soy wax candles infused with lavender, amber, and vanilla essential oils."
   );
   const [currency, setCurrency] = useState<StoreCurrency>("USD");
   const [language, setLanguage] = useState<StoreLanguage>("en");
 
   // Generated Theme State
-  const [fontPairing, setFontPairing] = useState<FontPairing>("sans");
-  const [colorPreset, setColorPreset] = useState<ColorPreset>("slate");
+  const [fontPairing, setFontPairing] = useState<FontPairing>("serif");
+  const [colorPreset, setColorPreset] = useState<ColorPreset>("rose");
   const [enableDarkModeToggle, setEnableDarkModeToggle] = useState(true);
 
   // Generated Content
-  const [tagline, setTagline] = useState("");
-  const [description, setDescription] = useState("");
+  const [tagline, setTagline] = useState("Handcrafted soy candles poured with natural botanicals.");
+  const [description, setDescription] = useState(
+    "Indulge in artisanal aromatherapeutic scents designed to elevate your home sanctuary."
+  );
   const [starterProducts, setStarterProducts] = useState<StarterProductDraft[]>([]);
   const [createdStore, setCreatedStore] = useState<Store | null>(null);
+
+  // Auth Gate Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"register" | "login">("register");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Loading / Error
   const [isPublishing, setIsPublishing] = useState(false);
@@ -90,24 +109,19 @@ export default function OnboardingPage() {
     setStep(2);
 
     try {
-      // If not logged in, auto-register / login a merchant account
+      // Temporary token or existing token if already logged in
       let authToken: string = token || "";
       if (!authToken) {
+        // Create an anonymous temporary merchant session or use demo user
         try {
-          const authRes = await apiClient.post<{ user: any; tokens: any }>("/auth/register", {
-            email: merchantEmail,
+          const anonRes = await apiClient.post<{ user: any; tokens: any }>("/auth/register", {
+            email: `creator-${Date.now()}@simplestore.demo`,
             password: "Password123!",
           });
-          authToken = authRes.tokens.access_token;
-          setAuth(authRes.user, authToken);
+          authToken = anonRes.tokens.access_token;
+          setAuth(anonRes.user, authToken);
         } catch {
-          // If already exists, login
-          const loginRes = await apiClient.post<{ user: any; tokens: any }>("/auth/login", {
-            email: merchantEmail,
-            password: "Password123!",
-          });
-          authToken = loginRes.tokens.access_token;
-          setAuth(loginRes.user, authToken);
+          // fallback
         }
       }
 
@@ -133,15 +147,10 @@ export default function OnboardingPage() {
           "Premium quality selection curated for modern lifestyles."
       );
 
-      // Set recommended theme tokens
       if (generated.theme_config) {
         setVibe((generated.theme_config.archetype as ThemeArchetype) || vibe);
-        setFontPairing(
-          (generated.theme_config.font_pairing as FontPairing) || "sans"
-        );
-        setColorPreset(
-          (generated.theme_config.color_preset as ColorPreset) || "slate"
-        );
+        setFontPairing((generated.theme_config.font_pairing as FontPairing) || "serif");
+        setColorPreset((generated.theme_config.color_preset as ColorPreset) || "rose");
       }
 
       // Fetch the generated products for preview
@@ -156,6 +165,7 @@ export default function OnboardingPage() {
           suggested_price: Number(p.price),
           inventory: p.inventory,
           image_url: p.image_url || undefined,
+          images: p.images || [],
         }))
       );
 
@@ -166,8 +176,55 @@ export default function OnboardingPage() {
     }
   };
 
-  // Step 3 -> 4: Save Customizations & Publish
-  const handleLaunchStore = async () => {
+  // Step 3 -> 4: Save Customizations & Open Auth Gate or Publish
+  const handleProceedToLaunch = () => {
+    // If not authenticated with a real permanent account, show Auth Gate Modal
+    if (!isAuthenticated() || user?.email?.endsWith("@simplestore.demo")) {
+      setIsAuthModalOpen(true);
+    } else {
+      finalizeAndLaunch(token!);
+    }
+  };
+
+  // Handle Auth Gate Submission (Register or Login)
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authEmail || !authPassword) {
+      setAuthError("Please provide both email and password.");
+      return;
+    }
+    setAuthError(null);
+    setIsAuthLoading(true);
+
+    try {
+      let authToken = "";
+      if (authMode === "register") {
+        const res = await apiClient.post<{ user: any; tokens: any }>("/auth/register", {
+          email: authEmail,
+          password: authPassword,
+        });
+        authToken = res.tokens.access_token;
+        setAuth(res.user, authToken);
+      } else {
+        const res = await apiClient.post<{ user: any; tokens: any }>("/auth/login", {
+          email: authEmail,
+          password: authPassword,
+        });
+        authToken = res.tokens.access_token;
+        setAuth(res.user, authToken);
+      }
+
+      setIsAuthModalOpen(false);
+      await finalizeAndLaunch(authToken);
+    } catch (err: any) {
+      setAuthError(err?.message || "Authentication failed. Please try again.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Finalize Store and Redirect to Dashboard Hub
+  const finalizeAndLaunch = async (authToken: string) => {
     if (!createdStore) return;
     setIsPublishing(true);
     setErrorMessage(null);
@@ -181,7 +238,6 @@ export default function OnboardingPage() {
         hero_style: "centered",
       };
 
-      // Update Store with final theme & copy
       const updated = await apiClient.patch<Store>(
         `/stores/${createdStore.id}`,
         {
@@ -191,14 +247,15 @@ export default function OnboardingPage() {
           currency,
           language,
           theme_config: updatedTheme,
+          is_active: true,
           published: true,
         },
-        token || undefined
+        authToken
       );
 
       setActiveStore(updated);
-      // Redirect to public store
-      router.push(`/store/${updated.slug}`);
+      // Redirect to Merchant Dashboard Hub
+      router.push("/dashboard");
     } catch (err: any) {
       setErrorMessage(err?.message || "Failed to publish store.");
       setIsPublishing(false);
@@ -216,15 +273,16 @@ export default function OnboardingPage() {
 
   const previewStore: Store = {
     id: createdStore?.id || "preview-id",
-    owner_id: "preview-owner",
+    owner_id: user?.id || "preview-owner",
     name: storeName,
-    slug: createdStore?.slug || "nordic-brew",
+    slug: createdStore?.slug || "velvet-flame-candles",
     category,
-    tagline: tagline || "Single-origin specialty coffee roasted for true coffee lovers.",
-    description: description || "Freshly roasted specialty coffee delivered straight to your door.",
+    tagline: tagline || "Artisanal organic soy candles poured with essential oils.",
+    description: description || "Elevate your ambient atmosphere with natural scents.",
     currency,
     language,
     theme_config: previewThemeConfig,
+    is_active: true,
     published: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -233,14 +291,20 @@ export default function OnboardingPage() {
   const previewProducts: Product[] = starterProducts.map((sp, idx) => ({
     id: `prod-${idx}`,
     store_id: previewStore.id,
+    product_code: `PROD-${(idx + 1).toString().padStart(3, "0")}`,
     name: sp.name,
     slug: `prod-${idx}`,
     description: sp.description,
+    mrp: sp.mrp || Math.round(sp.suggested_price * 1.25),
     price: sp.suggested_price,
     currency,
     inventory: sp.inventory || 10,
+    inventory_display_limit: sp.inventory || 10,
+    order_limit: 5,
     image_url: sp.image_url,
+    images: sp.images || (sp.image_url ? [sp.image_url] : []),
     is_ai_generated: true,
+    is_active: true,
     published: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -263,18 +327,18 @@ export default function OnboardingPage() {
           <Button
             size="sm"
             className="gap-2 font-bold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={handleLaunchStore}
+            onClick={handleProceedToLaunch}
             disabled={isPublishing}
           >
             {isPublishing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Publishing...
+                Launching Store...
               </>
             ) : (
               <>
                 <Rocket className="h-4 w-4" />
-                Launch & Publish Store
+                Save & Launch My Store
               </>
             )}
           </Button>
@@ -293,7 +357,7 @@ export default function OnboardingPage() {
               Tell us about your store
             </h1>
             <p className="text-sm text-muted-foreground">
-              Answer 4 quick questions. Our AI & design matrix will build your store and starter inventory in seconds.
+              Answer 4 quick questions. Our AI & design matrix will build your live website preview and starter products instantly.
             </p>
           </div>
 
@@ -314,7 +378,7 @@ export default function OnboardingPage() {
                   id="sname"
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="e.g. Artisan Candles, Nordic Brew, Velvet Studio"
+                  placeholder="e.g. Velvet & Flame Candles, Nordic Brew, Luxe Atelier"
                   className="h-11 font-medium"
                 />
               </div>
@@ -328,7 +392,7 @@ export default function OnboardingPage() {
                   id="scat"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Specialty Coffee, Handmade Jewelry, Leather Bags"
+                  placeholder="e.g. Handmade Scented Candles, Artisan Jewelry, Specialty Coffee"
                   className="h-11"
                 />
               </div>
@@ -344,7 +408,7 @@ export default function OnboardingPage() {
                       { id: "minimal", name: "Minimal", desc: "Clean & Modern" },
                       { id: "editorial", name: "Editorial", desc: "Luxury Serif" },
                       { id: "warm", name: "Warm", desc: "Organic & Cozy" },
-                      { id: "bold", name: "Bold", desc: "Punchy High-Contrast" },
+                      { id: "bold", name: "Bold", desc: "Punchy Contrast" },
                     ] as const
                   ).map((item) => (
                     <button
@@ -373,7 +437,7 @@ export default function OnboardingPage() {
                   id="sprod"
                   value={productSummary}
                   onChange={(e) => setProductSummary(e.target.value)}
-                  placeholder="e.g. Single-origin ethically sourced coffee beans roasted in micro-batches."
+                  placeholder="e.g. Organic soy wax candles infused with lavender, amber, and vanilla essential oils."
                   className="h-11"
                 />
               </div>
@@ -416,26 +480,12 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {/* Merchant Account Email */}
-              <div className="space-y-2 pt-2 border-t border-border/60">
-                <Label htmlFor="memail" className="text-xs font-semibold">
-                  Merchant Account Email
-                </Label>
-                <Input
-                  id="memail"
-                  type="email"
-                  value={merchantEmail}
-                  onChange={(e) => setMerchantEmail(e.target.value)}
-                  className="h-10 text-xs"
-                />
-              </div>
-
               <Button
                 onClick={handleStartGeneration}
                 className="w-full h-12 text-base font-bold gap-2 shadow-lg"
               >
                 <Sparkles className="h-4 w-4" />
-                Generate My Store with AI & Design Matrix
+                Generate Sample Preview & Products
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </CardContent>
@@ -463,7 +513,7 @@ export default function OnboardingPage() {
           <div className="w-full max-w-xs space-y-2 text-left text-xs text-muted-foreground">
             <div className="flex items-center gap-2 text-foreground font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span>Analyzing niche & market tone</span>
+              <span>Analyzing category & market tone</span>
             </div>
             <div className="flex items-center gap-2 text-foreground font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -618,7 +668,7 @@ export default function OnboardingPage() {
             <div className="pt-4 border-t border-border">
               <Button
                 className="w-full h-11 font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                onClick={handleLaunchStore}
+                onClick={handleProceedToLaunch}
                 disabled={isPublishing}
               >
                 {isPublishing ? (
@@ -647,6 +697,118 @@ export default function OnboardingPage() {
           </div>
         </div>
       )}
+
+      {/* AUTH GATE MODAL: Claim & Launch Store */}
+      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-2">
+              <Lock className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center text-xl font-bold">
+              {authMode === "register" ? "Create Account to Claim Store" : "Sign In to Your Account"}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs text-muted-foreground">
+              {authMode === "register"
+                ? `Save "${storeName}" to your merchant dashboard permanently.`
+                : "Sign in to connect this store to your existing account."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {authError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive font-medium">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="merchant@example.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="pl-9 h-10 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Password</Label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="pl-9 h-10 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 font-bold gap-2 bg-primary text-primary-foreground shadow-md"
+              disabled={isAuthLoading}
+            >
+              {isAuthLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving & Launching...
+                </>
+              ) : authMode === "register" ? (
+                <>
+                  <Rocket className="h-4 w-4" />
+                  Create Account & Launch Store
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Sign In & Launch Store
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="text-center pt-2 border-t border-border/50 text-xs text-muted-foreground">
+            {authMode === "register" ? (
+              <p>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthError(null);
+                  }}
+                  className="font-bold text-primary hover:underline"
+                >
+                  Sign In
+                </button>
+              </p>
+            ) : (
+              <p>
+                Need a new account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("register");
+                    setAuthError(null);
+                  }}
+                  className="font-bold text-primary hover:underline"
+                >
+                  Create Account
+                </button>
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
