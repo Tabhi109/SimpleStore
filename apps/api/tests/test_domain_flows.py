@@ -49,6 +49,7 @@ async def test_store_creation_and_public_retrieval(
             "enable_dark_mode_toggle": True,
             "hero_style": "centered",
         },
+        "published": False,
     }
     response = await client.post("/api/v1/stores", json=payload, headers=auth_headers)
     assert response.status_code == 201
