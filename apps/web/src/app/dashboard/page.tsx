@@ -157,6 +157,7 @@ export default function DashboardPage() {
   const [settingsCurrency, setSettingsCurrency] = useState<StoreCurrency>("USD");
   const [settingsLanguage, setSettingsLanguage] = useState<StoreLanguage>("en");
   const [settingsTagline, setSettingsTagline] = useState("");
+  const [settingsDescription, setSettingsDescription] = useState("");
   const [isSavingTheme, setIsSavingTheme] = useState(false);
 
   // Auth Guard
@@ -188,6 +189,7 @@ export default function DashboardPage() {
           setSettingsCurrency(current.currency || "USD");
           setSettingsLanguage(current.language || "en");
           setSettingsTagline(current.tagline || "");
+          setSettingsDescription(current.description || "");
 
           const [prods, ords, coups] = await Promise.all([
             apiClient.get<Product[]>(`/stores/${current.id}/products`, token!),
@@ -540,12 +542,13 @@ export default function DashboardPage() {
           currency: settingsCurrency,
           language: settingsLanguage,
           tagline: settingsTagline,
+          description: settingsDescription,
         },
         token || undefined
       );
       setSelectedStore(updated);
       setActiveStore(updated);
-      alert("Store theme & settings saved successfully!");
+      alert("Store appearance & brand tone saved successfully!");
     } catch (err: any) {
       alert(err.message || "Failed to save theme.");
     } finally {
@@ -695,7 +698,7 @@ export default function DashboardPage() {
       {/* 2. MAIN DASHBOARD TABS */}
       <main className="container mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-3xl bg-muted/60 p-1 rounded-xl">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-7 w-full max-w-4xl bg-muted/60 p-1 rounded-xl">
             <TabsTrigger value="overview" className="gap-1.5 text-xs font-semibold">
               <TrendingUp className="h-3.5 w-3.5" />
               Overview
@@ -719,6 +722,10 @@ export default function DashboardPage() {
             <TabsTrigger value="coupons" className="gap-1.5 text-xs font-semibold">
               <Tag className="h-3.5 w-3.5" />
               Coupons ({coupons.length})
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="gap-1.5 text-xs font-semibold">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              Appearance
             </TabsTrigger>
           </TabsList>
 
@@ -1374,6 +1381,197 @@ export default function DashboardPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* TAB 7: APPEARANCE & BRAND TONE CUSTOMIZER */}
+          <TabsContent value="appearance" className="space-y-6">
+            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-sm space-y-8">
+              <div>
+                <h3 className="text-xl font-bold text-foreground">Storefront Appearance & Brand Tone</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Customize your luxury e-commerce layout, typography, color palette, and copy in one place.
+                </p>
+              </div>
+
+              {/* 1. Style Archetype Selector */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  1. Brand Style Archetype
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    {
+                      id: "editorial",
+                      name: "Editorial Luxury",
+                      desc: "Layla inspired: High-end luxury magazine aesthetic, serif accents & rich storytelling cards.",
+                    },
+                    {
+                      id: "bold",
+                      name: "Streetwear Bold",
+                      desc: "Veirdo inspired: High-energy contrast, punchy badges, sharp borders & modern streetwear vibe.",
+                    },
+                    {
+                      id: "warm",
+                      name: "Warm Organic",
+                      desc: "Atomishine inspired: Ambient terracotta surfaces, gentle rounded curves & artisanal warmth.",
+                    },
+                    {
+                      id: "minimal",
+                      name: "Minimal Clean",
+                      desc: "Clean monochrome whitespace, borderless product cards & ultra-modern sleekness.",
+                    },
+                  ].map((arch) => (
+                    <button
+                      key={arch.id}
+                      type="button"
+                      onClick={() => setThemeArchetype(arch.id as ThemeArchetype)}
+                      className={`p-4 rounded-xl text-left border-2 transition-all flex flex-col justify-between ${
+                        themeArchetype === arch.id
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border/60 hover:border-foreground/40 bg-background"
+                      }`}
+                    >
+                      <div>
+                        <h4 className="font-bold text-sm text-foreground">{arch.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{arch.desc}</p>
+                      </div>
+                      {themeArchetype === arch.id && (
+                        <Badge className="mt-3 w-fit text-[10px] uppercase font-bold">Selected</Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Font Pairing & Typography */}
+              <div className="space-y-3 pt-4 border-t border-border/60">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  2. Typography & Font Pairing
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: "serif", name: "Editorial Serif (Playfair)" },
+                    { id: "sans", name: "Modern Sans (Inter)" },
+                    { id: "mono", name: "Technical Mono (JetBrains)" },
+                    { id: "rounded", name: "Warm Rounded (Outfit)" },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFontPairing(f.id as FontPairing)}
+                      className={`p-3 rounded-xl text-xs font-bold border transition-all text-center ${
+                        fontPairing === f.id
+                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                          : "border-border/60 hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Color Palette Presets */}
+              <div className="space-y-3 pt-4 border-t border-border/60">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  3. Accent Color Palette
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  {[
+                    { id: "slate", name: "Midnight Slate", color: "bg-slate-900" },
+                    { id: "rose", name: "Velvet Rose", color: "bg-rose-600" },
+                    { id: "amber", name: "Warm Terracotta", color: "bg-amber-600" },
+                    { id: "emerald", name: "Forest Emerald", color: "bg-emerald-600" },
+                    { id: "indigo", name: "Royal Indigo", color: "bg-indigo-600" },
+                  ].map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setColorPreset(c.id as ColorPreset)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
+                        colorPreset === c.id
+                          ? "border-primary ring-2 ring-primary/30 bg-muted/60"
+                          : "border-border/60 hover:bg-muted/40"
+                      }`}
+                    >
+                      <span className={`h-3.5 w-3.5 rounded-full ${c.color}`} />
+                      <span>{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Brand Copy & Ticker Content */}
+              <div className="space-y-4 pt-4 border-t border-border/60">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  4. Storefront Copy & Announcement
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">Hero Tagline / Slogan</label>
+                    <Input
+                      value={settingsTagline}
+                      onChange={(e) => setSettingsTagline(e.target.value)}
+                      placeholder="e.g. An Olfactory Sanctuary for Every Space."
+                      className="h-10 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">Store Currency</label>
+                    <select
+                      value={settingsCurrency}
+                      onChange={(e) => setSettingsCurrency(e.target.value as StoreCurrency)}
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-xs font-medium"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="INR">INR (₹)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="CAD">CAD ($)</option>
+                      <option value="AUD">AUD ($)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">Brand Story / Description</label>
+                  <textarea
+                    rows={3}
+                    value={settingsDescription}
+                    onChange={(e) => setSettingsDescription(e.target.value)}
+                    placeholder="Welcome to our store. We create exceptional handcrafted items..."
+                    className="w-full p-3 rounded-lg border border-border bg-background text-xs leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              {/* 5. Save Action Button */}
+              <div className="pt-4 border-t border-border/60 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="darkToggle"
+                    checked={enableDarkModeToggle}
+                    onChange={(e) => setEnableDarkModeToggle(e.target.checked)}
+                    className="rounded border-border h-4 w-4 text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="darkToggle" className="text-xs font-medium text-muted-foreground">
+                    Enable visitor dark mode toggle switch
+                  </label>
+                </div>
+
+                <Button
+                  onClick={handleSaveTheme}
+                  disabled={isSavingTheme}
+                  className="gap-2 h-11 px-6 font-bold shadow-md bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>{isSavingTheme ? "Saving..." : "Save Appearance & Sync Store"}</span>
+                </Button>
               </div>
             </div>
           </TabsContent>
