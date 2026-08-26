@@ -116,7 +116,7 @@ export function StorefrontView({
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 text-[11px] font-medium text-[#EADDC9]">
           <span className="flex items-center gap-1.5">
             <Sparkles className="h-3 w-3 text-amber-400" />
-            Handcrafted with 100% Pure Botanical Ingredients
+            {theme?.announcement_text || "Handcrafted with 100% Pure Botanical Ingredients"}
           </span>
           <span className="hidden md:inline">•</span>
           <span className="hidden md:inline">Cash on Delivery (COD) Available</span>
@@ -126,11 +126,30 @@ export function StorefrontView({
       </div>
 
       {/* 3. Luxury Brand Header */}
-      <header className="sticky top-0 z-40 w-full transition-all duration-300 bg-[#FAF8F5]/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-border/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between">
+      <header className="sticky top-0 z-40 w-full transition-all duration-300 bg-[#FAF8F5]/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-border/40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex h-20 items-center justify-between gap-4">
+            {/* Brand Logo & Name */}
+            <Link href={`/store/${store.slug}`} className="group flex items-center gap-3 min-w-0 flex-shrink-0">
+              {store.logo_url ? (
+                <img
+                  src={store.logo_url}
+                  alt={store.name}
+                  className="h-10 w-10 object-contain rounded-lg border border-border/40 bg-card p-1 shadow-xs"
+                />
+              ) : null}
+              <div className="flex flex-col min-w-0">
+                <h1 className={`text-xl sm:text-2xl font-extrabold tracking-tight ${font.headingClass} text-foreground group-hover:opacity-80 transition-opacity truncate`}>
+                  {store.name}
+                </h1>
+                <span className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground font-bold truncate">
+                  {store.category || "Handcrafted Store"}
+                </span>
+              </div>
+            </Link>
+
             {/* Navigation Anchor Links */}
-            <nav className="hidden lg:flex items-center space-x-6 text-xs uppercase tracking-widest font-semibold">
+            <nav className="hidden xl:flex items-center space-x-6 text-xs uppercase tracking-widest font-semibold text-muted-foreground">
               <a href="#shop-all" className="hover:text-primary transition-colors">
                 Shop All
               </a>
@@ -144,28 +163,6 @@ export function StorefrontView({
                 Reviews
               </a>
             </nav>
-
-            {/* Brand Logo / Monogram & Name */}
-            <div className="flex-1 lg:flex-initial text-center lg:px-4">
-              <Link href={`/store/${store.slug}`} className="group inline-flex flex-col items-center">
-                {store.logo_url ? (
-                  <img
-                    src={store.logo_url}
-                    alt={store.name}
-                    className="h-10 w-auto object-contain rounded-md"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${font.headingClass} text-foreground group-hover:scale-102 transition-transform`}>
-                      {store.name}
-                    </h1>
-                    <span className="text-[8px] sm:text-[9px] tracking-[0.3em] uppercase text-muted-foreground font-semibold mt-0.5">
-                      {store.category || "Handcrafted Luxury"}
-                    </span>
-                  </div>
-                )}
-              </Link>
-            </div>
 
             {/* Header Action Controls */}
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -428,37 +425,51 @@ export function StorefrontView({
                 The Story of {store.name}
               </span>
               <h3 className={`text-3xl sm:text-4xl md:text-5xl font-light text-foreground leading-tight ${font.headingClass}`}>
-                Crafted by hand with intention, warmth, and enduring beauty.
+                Crafted with intention, warmth, and enduring quality.
               </h3>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Every product is individually hand-poured in small batches, using pure soy wax harvested sustainably and blended with bespoke perfumery notes. Designed to transform ordinary routines into extraordinary daily rituals.
+                {theme?.about_story || "Every product is individually hand-crafted in small batches, using pure ingredients harvested sustainably and blended with bespoke artisan notes. Designed to transform ordinary routines into extraordinary daily rituals."}
               </p>
 
               {/* 3 Core Value Pillar Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-border/60">
-                <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
-                  <div className="flex items-center space-x-2 text-foreground font-semibold">
-                    <Flame className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm">Pure Soy</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Sustainably sourced, soot-free clean burn.</p>
-                </div>
+                {theme?.brand_pillars && theme.brand_pillars.length > 0 ? (
+                  theme.brand_pillars.map((p, idx) => (
+                    <div key={idx} className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
+                      <div className="flex items-center space-x-2 text-foreground font-semibold">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{p.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{p.desc}</p>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
+                      <div className="flex items-center space-x-2 text-foreground font-semibold">
+                        <Flame className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm">Pure Ingredients</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Sustainably sourced, premium grade materials.</p>
+                    </div>
 
-                <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
-                  <div className="flex items-center space-x-2 text-foreground font-semibold">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Small Batch</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Hand-poured by dedicated artisans.</p>
-                </div>
+                    <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
+                      <div className="flex items-center space-x-2 text-foreground font-semibold">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Small Batch</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Handcrafted by dedicated artisans.</p>
+                    </div>
 
-                <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
-                  <div className="flex items-center space-x-2 text-foreground font-semibold">
-                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                    <span className="text-sm">Toxin-Free</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Non-toxic, phthalate-free oils.</p>
-                </div>
+                    <div className="space-y-1.5 p-3 rounded-xl bg-background/50 border border-border/40">
+                      <div className="flex items-center space-x-2 text-foreground font-semibold">
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                        <span className="text-sm">Toxin-Free</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Non-toxic, safe & verified quality.</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -891,10 +902,11 @@ export function StorefrontView({
             <div className="space-y-2">
               <h5 className="font-bold text-white uppercase tracking-wider text-xs">Customer Care</h5>
               <ul className="space-y-1.5 text-[11px]">
-                <li><span>Cash on Delivery Policy</span></li>
-                <li><span>Track Order Delivery</span></li>
-                <li><span>7-Day Return Policy</span></li>
-                <li><span>Support: support@simplestore.demo</span></li>
+                <li><span>Cash on Delivery: Available</span></li>
+                <li><span>{theme?.shipping_note || "Tracked Delivery in 2-4 Business Days"}</span></li>
+                <li><span>7-Day Return & Replacement Policy</span></li>
+                <li><span>Support: {theme?.contact_email || "support@simplestore.demo"}</span></li>
+                {theme?.contact_phone && <li><span>Helpline: {theme.contact_phone}</span></li>}
               </ul>
             </div>
 

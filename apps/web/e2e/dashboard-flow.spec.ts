@@ -9,16 +9,15 @@ test.describe("Merchant Dashboard & Shopper End-to-End Flow", () => {
     await page.fill("#pass", "Password123!");
     await page.click("button:has-text('Create Account & Continue')");
 
-    // Land on onboarding
+    // Land on onboarding categorized builder
     await expect(page).toHaveURL(/.*\/onboarding.*/, { timeout: 10000 });
+    await expect(page.getByText(/Customize Storefront/i)).toBeVisible();
+
     await page.fill("#storeName", `Luxe Candles ${timestamp}`);
     await page.fill("#category", "Aromatherapy Soy Candles");
-    await page.fill("#productSummary", "Hand-poured organic candles with wooden wicks.");
 
-    // Generate store
-    await page.click("button:has-text('Build Live Store Preview')");
-    await expect(page.getByText(/Customize Storefront/i)).toBeVisible({ timeout: 15000 });
-    await page.click("button:has-text('Save & Launch My Store')");
+    // Launch store directly (already logged in)
+    await page.locator("button:has-text('Save & Launch My Store')").first().click();
 
     // Redirected to Dashboard Hub
     await expect(page).toHaveURL(/.*\/dashboard.*/, { timeout: 15000 });

@@ -17,7 +17,7 @@ test.describe("SimpleStore End-to-End User Journey", () => {
     await page.locator("button:has-text('Forest Emerald')").first().click();
 
     // Dark Mode Toggle works
-    const themeBtn = page.getByRole("button", { name: /Toggle theme/i });
+    const themeBtn = page.getByRole("banner").getByRole("button", { name: /Toggle theme/i });
     await expect(themeBtn).toBeVisible();
     await themeBtn.click();
     await page.click("div[role='menuitem']:has-text('Dark')");
@@ -31,22 +31,19 @@ test.describe("SimpleStore End-to-End User Journey", () => {
 
   test("Merchant can navigate onboarding, use Auth Gate modal, and launch store", async ({ page }) => {
     await page.goto("/onboarding");
-    await expect(page.getByText("Tell us about your store")).toBeVisible();
+    await expect(page.getByText(/Customize Storefront/i)).toBeVisible();
 
-    // Fill questionnaire
+    // Fill Header & Identity details
     const timestamp = Date.now();
     await page.fill("#storeName", `Artisan Candles ${timestamp}`);
     await page.fill("#category", "Handmade Scented Candles");
-    await page.fill("#productSummary", "Organic soy wax candles infused with lavender and amber.");
 
-    // Click Generate Button
-    await page.click("button:has-text('Build Live Store Preview')");
-
-    // Wait for split-screen customizer
-    await expect(page.getByText(/Customize Storefront/i)).toBeVisible({ timeout: 15000 });
+    // Switch to Store tab and verify starter products
+    await page.getByRole("button", { name: "Store", exact: true }).click();
+    await expect(page.getByText(/Catalog Products/i)).toBeVisible();
 
     // Click Save & Launch Store -> Opens Auth Gate Modal
-    await page.click("button:has-text('Save & Launch My Store')");
+    await page.locator("button:has-text('Save & Launch My Store')").first().click();
     await expect(page.getByText(/Create Account to Launch Store/i)).toBeVisible();
 
     // Fill Auth Gate Modal registration form

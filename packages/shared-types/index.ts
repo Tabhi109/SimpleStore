@@ -42,6 +42,12 @@ export interface PaletteConfig {
   muted: string;
 }
 
+export interface BrandPillar {
+  title: string;
+  desc: string;
+  icon?: string;
+}
+
 export interface ThemeConfig {
   archetype: ThemeArchetype;
   font_pairing: FontPairing;
@@ -50,6 +56,12 @@ export interface ThemeConfig {
   hero_style: "centered" | "split" | "minimal";
   palette?: PaletteConfig;
   custom_images?: string[];
+  announcement_text?: string;
+  about_story?: string;
+  brand_pillars?: BrandPillar[];
+  contact_email?: string;
+  contact_phone?: string;
+  shipping_note?: string;
 }
 
 // -----------------------------------------------------------------------------

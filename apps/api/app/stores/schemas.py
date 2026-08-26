@@ -14,6 +14,14 @@ class ThemeConfigSchema(BaseModel):
     enable_dark_mode_toggle: bool = True
     hero_style: str = "centered"
     custom_images: list[str] | None = None
+    announcement_text: str | None = None
+    about_story: str | None = None
+    brand_pillars: list[dict[str, Any]] | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    shipping_note: str | None = None
+
+    model_config = {"extra": "allow"}
 
 
 class StoreCreateRequest(BaseModel):
