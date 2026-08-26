@@ -25,7 +25,7 @@ import {
 import {
   ColorPreset,
   FontPairing,
-  OnboardingQuestionnaire,
+  OnboardingGenerationResult,
   Product,
   StarterProductDraft,
   Store,
@@ -61,10 +61,8 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { setAuth, setActiveStore, user, token, isAuthenticated } = useAuthStore();
 
-  // Wizard Steps: 1 = Form, 2 = AI Generating, 3 = Split-screen Customizer
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Merchant Inputs
   const [storeName, setStoreName] = useState("Velvet & Flame Candles");
   const [category, setCategory] = useState("Handmade Scented Candles");
   const [vibe, setVibe] = useState<ThemeArchetype>("editorial");
@@ -74,20 +72,16 @@ export default function OnboardingPage() {
   const [currency, setCurrency] = useState<StoreCurrency>("USD");
   const [language, setLanguage] = useState<StoreLanguage>("en");
 
-  // Generated Theme State
   const [fontPairing, setFontPairing] = useState<FontPairing>("serif");
   const [colorPreset, setColorPreset] = useState<ColorPreset>("rose");
   const [enableDarkModeToggle, setEnableDarkModeToggle] = useState(true);
 
-  // Generated Content
   const [tagline, setTagline] = useState("Handcrafted soy candles poured with natural botanicals.");
   const [description, setDescription] = useState(
     "Indulge in artisanal aromatherapeutic scents designed to elevate your home sanctuary."
   );
   const [starterProducts, setStarterProducts] = useState<StarterProductDraft[]>([]);
-  const [createdStore, setCreatedStore] = useState<Store | null>(null);
 
-  // Auth Gate Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"register" | "login">("register");
   const [authEmail, setAuthEmail] = useState("");
@@ -95,13 +89,11 @@ export default function OnboardingPage() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Loading / Error
   const [isPublishing, setIsPublishing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Step 1 -> 2: Call AI Generator
   const handleStartGeneration = async () => {
-    if (!storeName || !category) {
+    if (!storeName.trim() || !category.trim()) {
       setErrorMessage("Please fill in your store name and category.");
       return;
     }
@@ -109,25 +101,8 @@ export default function OnboardingPage() {
     setStep(2);
 
     try {
-      // Temporary token or existing token if already logged in
-      let authToken: string = token || "";
-      if (!authToken) {
-        // Create an anonymous temporary merchant session or use demo user
-        try {
-          const anonRes = await apiClient.post<{ user: any; tokens: any }>("/auth/register", {
-            email: `creator-${Date.now()}@simplestore.demo`,
-            password: "Password123!",
-          });
-          authToken = anonRes.tokens.access_token;
-          setAuth(anonRes.user, authToken);
-        } catch {
-          // fallback
-        }
-      }
-
-      // Call AI Onboarding Endpoint
-      const generated = await apiClient.post<Store>(
-        "/stores/onboarding-generate",
+      const generated = await apiClient.post<OnboardingGenerationResult>(
+        "/ai/onboarding-generate",
         {
           store_name: storeName,
           category: category,
@@ -135,39 +110,32 @@ export default function OnboardingPage() {
           product_summary: productSummary,
           currency: currency,
           language: language,
-        },
-        authToken
+        }
       );
 
-      setCreatedStore(generated);
-      setActiveStore(generated);
-      setTagline(generated.tagline || `${category} crafted with care.`);
-      setDescription(
-        generated.description ||
-          "Premium quality selection curated for modern lifestyles."
-      );
+      if (generated.tagline) setTagline(generated.tagline);
+      if (generated.description) setDescription(generated.description);
 
-      if (generated.theme_config) {
-        setVibe((generated.theme_config.archetype as ThemeArchetype) || vibe);
-        setFontPairing((generated.theme_config.font_pairing as FontPairing) || "serif");
-        setColorPreset((generated.theme_config.color_preset as ColorPreset) || "rose");
+      if (generated.theme_recommendation) {
+        setVibe((generated.theme_recommendation.archetype as ThemeArchetype) || vibe);
+        setFontPairing((generated.theme_recommendation.font_pairing as FontPairing) || fontPairing);
+        setColorPreset((generated.theme_recommendation.color_preset as ColorPreset) || colorPreset);
       }
 
-      // Fetch the generated products for preview
-      const prods = await apiClient.get<Product[]>(
-        `/stores/${generated.id}/products`,
-        authToken
-      );
-      setStarterProducts(
-        prods.map((p) => ({
-          name: p.name,
-          description: p.description || "",
-          suggested_price: Number(p.price),
-          inventory: p.inventory,
-          image_url: p.image_url || undefined,
-          images: p.images || [],
-        }))
-      );
+      if (Array.isArray(generated.starter_products) && generated.starter_products.length > 0) {
+        setStarterProducts(generated.starter_products);
+      } else {
+        setStarterProducts([
+          {
+            name: `${storeName} Signature Item`,
+            description: `Handcrafted ${category.toLowerCase()} made with pure sustainable ingredients.`,
+            suggested_price: 32,
+            mrp: 40,
+            inventory: 15,
+            image_url: "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800",
+          },
+        ]);
+      }
 
       setStep(3);
     } catch (err: any) {
@@ -176,20 +144,17 @@ export default function OnboardingPage() {
     }
   };
 
-  // Step 3 -> 4: Save Customizations & Open Auth Gate or Publish
   const handleProceedToLaunch = () => {
-    // If not authenticated with a real permanent account, show Auth Gate Modal
-    if (!isAuthenticated() || user?.email?.endsWith("@simplestore.demo")) {
-      setIsAuthModalOpen(true);
+    if (isAuthenticated() && token) {
+      createAndLaunchStore(token);
     } else {
-      finalizeAndLaunch(token!);
+      setIsAuthModalOpen(true);
     }
   };
 
-  // Handle Auth Gate Submission (Register or Login)
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authEmail || !authPassword) {
+    if (!authEmail.trim() || !authPassword.trim()) {
       setAuthError("Please provide both email and password.");
       return;
     }
@@ -200,14 +165,14 @@ export default function OnboardingPage() {
       let authToken = "";
       if (authMode === "register") {
         const res = await apiClient.post<{ user: any; tokens: any }>("/auth/register", {
-          email: authEmail,
+          email: authEmail.trim(),
           password: authPassword,
         });
         authToken = res.tokens.access_token;
         setAuth(res.user, authToken);
       } else {
         const res = await apiClient.post<{ user: any; tokens: any }>("/auth/login", {
-          email: authEmail,
+          email: authEmail.trim(),
           password: authPassword,
         });
         authToken = res.tokens.access_token;
@@ -215,22 +180,20 @@ export default function OnboardingPage() {
       }
 
       setIsAuthModalOpen(false);
-      await finalizeAndLaunch(authToken);
+      await createAndLaunchStore(authToken);
     } catch (err: any) {
-      setAuthError(err?.message || "Authentication failed. Please try again.");
+      setAuthError(err?.message || "Authentication failed. Please check your credentials.");
     } finally {
       setIsAuthLoading(false);
     }
   };
 
-  // Finalize Store and Redirect to Dashboard Hub
-  const finalizeAndLaunch = async (authToken: string) => {
-    if (!createdStore) return;
+  const createAndLaunchStore = async (authToken: string) => {
     setIsPublishing(true);
     setErrorMessage(null);
 
     try {
-      const updatedTheme: ThemeConfig = {
+      const themePayload: ThemeConfig = {
         archetype: vibe,
         font_pairing: fontPairing,
         color_preset: colorPreset,
@@ -238,31 +201,58 @@ export default function OnboardingPage() {
         hero_style: "centered",
       };
 
-      const updated = await apiClient.patch<Store>(
-        `/stores/${createdStore.id}`,
+      const newStore = await apiClient.post<Store>(
+        "/stores",
         {
-          name: storeName,
-          tagline,
-          description,
+          name: storeName.trim(),
+          category: category.trim(),
+          tagline: tagline.trim(),
+          description: description.trim(),
           currency,
           language,
-          theme_config: updatedTheme,
+          theme_config: themePayload,
           is_active: true,
           published: true,
         },
         authToken
       );
 
-      setActiveStore(updated);
-      // Redirect to Merchant Dashboard Hub
+      for (let i = 0; i < starterProducts.length; i++) {
+        const p = starterProducts[i];
+        const priceNum = Number(p.suggested_price) || 25;
+        const mrpNum = Number(p.mrp) || Math.round(priceNum * 1.25);
+
+        try {
+          await apiClient.post(
+            `/stores/${newStore.id}/products`,
+            {
+              name: p.name,
+              product_code: `PROD-${(i + 1).toString().padStart(3, "0")}`,
+              description: p.description,
+              price: priceNum,
+              mrp: mrpNum,
+              inventory: p.inventory || 10,
+              image_url: p.image_url || undefined,
+              images: p.images && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : [],
+              is_ai_generated: true,
+              is_active: true,
+              published: true,
+            },
+            authToken
+          );
+        } catch (prodErr) {
+          console.warn("Failed creating initial product:", prodErr);
+        }
+      }
+
+      setActiveStore(newStore);
       router.push("/dashboard");
     } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to publish store.");
+      setErrorMessage(err?.message || "Failed to create store. Please try again.");
       setIsPublishing(false);
     }
   };
 
-  // Preview mock objects
   const previewThemeConfig: ThemeConfig = {
     archetype: vibe,
     font_pairing: fontPairing,
@@ -272,13 +262,13 @@ export default function OnboardingPage() {
   };
 
   const previewStore: Store = {
-    id: createdStore?.id || "preview-id",
+    id: "preview-id",
     owner_id: user?.id || "preview-owner",
-    name: storeName,
-    slug: createdStore?.slug || "velvet-flame-candles",
+    name: storeName || "My Store",
+    slug: storeName ? storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "my-store",
     category,
-    tagline: tagline || "Artisanal organic soy candles poured with essential oils.",
-    description: description || "Elevate your ambient atmosphere with natural scents.",
+    tagline: tagline || `${category} handcrafted with intention.`,
+    description: description || "Curated collection of artisanal goods.",
     currency,
     language,
     theme_config: previewThemeConfig,
@@ -312,8 +302,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Navbar */}
-      <header className="border-b border-border/60 bg-card/60 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
             S
@@ -351,126 +340,125 @@ export default function OnboardingPage() {
           <div className="text-center space-y-2">
             <Badge variant="outline" className="gap-1.5 py-1 px-3">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              5-Minute Zero-Effort Setup
+              5-Minute Setup
             </Badge>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
               Tell us about your store
             </h1>
             <p className="text-sm text-muted-foreground">
-              Answer 4 quick questions. Our AI & design matrix will build your live website preview and starter products instantly.
+              Answer 4 quick questions. We will build your live website preview and starter products instantly.
             </p>
           </div>
 
           {errorMessage && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium">
+            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm">
               {errorMessage}
             </div>
           )}
 
-          <Card className="shadow-lg border-border/80">
-            <CardContent className="p-6 space-y-6">
-              {/* Question 1: Store Name */}
+          <Card className="border-border/80 shadow-md">
+            <CardContent className="pt-6 space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="sname" className="font-semibold text-sm">
-                  1. What is your store name?
+                <Label htmlFor="storeName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  1. Store Name
                 </Label>
                 <Input
-                  id="sname"
+                  id="storeName"
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="e.g. Velvet & Flame Candles, Nordic Brew, Luxe Atelier"
-                  className="h-11 font-medium"
+                  placeholder="e.g. Velvet & Flame Candles"
+                  className="h-11 text-base font-semibold"
+                  required
                 />
               </div>
 
-              {/* Question 2: Category */}
               <div className="space-y-2">
-                <Label htmlFor="scat" className="font-semibold text-sm">
-                  2. What category or niche are you selling?
+                <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  2. Business Category & Niche
                 </Label>
                 <Input
-                  id="scat"
+                  id="category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Handmade Scented Candles, Artisan Jewelry, Specialty Coffee"
+                  placeholder="e.g. Handmade Scented Candles, Streetwear Apparel, Artisanal Jewelry"
                   className="h-11"
+                  required
                 />
               </div>
 
-              {/* Question 3: Vibe Selection */}
-              <div className="space-y-2">
-                <Label className="font-semibold text-sm">
-                  3. Choose your initial brand aesthetic:
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  3. Brand Tone & Aesthetic
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {(
-                    [
-                      { id: "minimal", name: "Minimal", desc: "Clean & Modern" },
-                      { id: "editorial", name: "Editorial", desc: "Luxury Serif" },
-                      { id: "warm", name: "Warm", desc: "Organic & Cozy" },
-                      { id: "bold", name: "Bold", desc: "Punchy Contrast" },
-                    ] as const
-                  ).map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      onClick={() => setVibe(item.id)}
-                      className={`flex flex-col items-start p-3 rounded-lg border text-left transition-all ${
-                        vibe === item.id
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
-                          : "border-border hover:border-foreground/30 bg-card"
-                      }`}
-                    >
-                      <span className="font-bold text-sm">{item.name}</span>
-                      <span className="text-[11px] text-muted-foreground">{item.desc}</span>
-                    </button>
-                  ))}
+                  {(Object.keys(THEME_ARCHETYPES) as ThemeArchetype[]).map((key) => {
+                    const arch = THEME_ARCHETYPES[key];
+                    const isSelected = vibe === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setVibe(key)}
+                        className={`p-3 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                            : "border-border/60 hover:border-foreground/40 bg-card"
+                        }`}
+                      >
+                        <div>
+                          <span className="font-bold text-xs block text-foreground">{arch.name}</span>
+                          <span className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                            {arch.description}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <span className="mt-2 flex items-center text-[10px] font-bold text-primary gap-1">
+                            <Check className="h-3 w-3" /> Selected
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Question 4: Product Summary */}
               <div className="space-y-2">
-                <Label htmlFor="sprod" className="font-semibold text-sm">
-                  4. Describe your products or specialty in 1 sentence:
+                <Label htmlFor="productSummary" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  4. What makes your products special?
                 </Label>
-                <Input
-                  id="sprod"
+                <textarea
+                  id="productSummary"
+                  rows={3}
                   value={productSummary}
                   onChange={(e) => setProductSummary(e.target.value)}
-                  placeholder="e.g. Organic soy wax candles infused with lavender, amber, and vanilla essential oils."
-                  className="h-11"
+                  placeholder="e.g. 100% natural soy wax, hand-poured in small batches with lavender and amber."
+                  className="w-full rounded-xl border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
 
-              {/* Currency & Language Settings */}
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/60">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5 text-primary" />
-                    Store Currency
-                  </Label>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">Store Currency</Label>
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value as StoreCurrency)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm font-medium"
                   >
-                    {Object.entries(CURRENCY_MAP).map(([curr, def]) => (
-                      <option key={curr} value={curr}>
-                        {def.label}
-                      </option>
-                    ))}
+                    <option value="USD">USD ($)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CAD">CAD ($)</option>
+                    <option value="AUD">AUD ($)</option>
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Globe className="h-3.5 w-3.5 text-primary" />
-                    Store Language
-                  </Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">Language</Label>
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value as StoreLanguage)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm font-medium"
                   >
                     <option value="en">English (EN)</option>
                     <option value="hi">Hindi (HI)</option>
@@ -481,213 +469,216 @@ export default function OnboardingPage() {
               </div>
 
               <Button
+                size="lg"
+                className="w-full h-12 font-bold gap-2 text-sm shadow-lg shadow-primary/20 bg-primary text-primary-foreground hover:bg-primary/95 mt-4"
                 onClick={handleStartGeneration}
-                className="w-full h-12 text-base font-bold gap-2 shadow-lg"
               >
                 <Sparkles className="h-4 w-4" />
-                Generate Sample Preview & Products
-                <ArrowRight className="h-4 w-4" />
+                <span>Build Live Store Preview</span>
+                <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* STEP 2: AI Loading Screen */}
+      {/* STEP 2: AI Generating */}
       {step === 2 && (
-        <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-6">
-          <div className="relative">
-            <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-            <Sparkles className="h-8 w-8 text-primary absolute top-6 left-6 animate-pulse" />
+        <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-6">
+          <div className="relative flex items-center justify-center">
+            <div className="h-20 w-20 rounded-full bg-primary/10 border-2 border-primary/30 animate-ping absolute" />
+            <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xl">
+              <Sparkles className="h-8 w-8 animate-spin" style={{ animationDuration: "4s" }} />
+            </div>
           </div>
 
           <div className="space-y-2 max-w-md">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Generating your store...
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Writing compelling brand story, drafting starter products, and applying design tokens for {storeName}.
+            <h2 className="text-2xl font-bold tracking-tight">Designing {storeName}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Applying design archetypes, drafting brand philosophy copy, and configuring starter catalog...
             </p>
-          </div>
-
-          <div className="w-full max-w-xs space-y-2 text-left text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 text-foreground font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span>Analyzing category & market tone</span>
-            </div>
-            <div className="flex items-center gap-2 text-foreground font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span>Generating marketing copy & tagline</span>
-            </div>
-            <div className="flex items-center gap-2 text-foreground font-medium">
-              <Loader2 className="h-4 w-4 text-primary animate-spin" />
-              <span>Crafting starter product catalog</span>
-            </div>
           </div>
         </div>
       )}
 
-      {/* STEP 3: Split-Screen Live Theme Matrix Customizer */}
+      {/* STEP 3: Split-Screen Live Customizer */}
       {step === 3 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 lg:h-[calc(100vh-65px)] min-h-[calc(100vh-65px)] overflow-y-auto lg:overflow-hidden">
-          {/* Left Controls Panel */}
-          <div className="lg:col-span-5 border-r border-border p-4 sm:p-6 overflow-y-auto space-y-6 bg-card">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Palette className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-bold">Theme & Design Matrix</h2>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Customize your store&apos;s look. Changes reflect live on the preview.
+        <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-65px)]">
+          {/* Left Panel: Live Customizer Controls */}
+          <div className="lg:col-span-4 border-r border-border/70 p-6 space-y-6 bg-card/40 overflow-y-auto max-h-[calc(100vh-65px)]">
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground mb-3 -ml-2"
+                onClick={() => setStep(1)}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to Questionnaire</span>
+              </Button>
+              <h2 className="text-lg font-bold text-foreground">Customize Storefront</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Real-time preview reflects all changes immediately.
               </p>
             </div>
 
-            {/* 1. Style Archetype */}
+            {/* Archetype Selector */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Layout className="h-3.5 w-3.5" />
-                1. Style Archetype
-              </Label>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Layout className="h-3.5 w-3.5 text-primary" />
+                Theme Archetype
+              </label>
               <div className="grid grid-cols-2 gap-2">
-                {(Object.entries(THEME_ARCHETYPES) as [ThemeArchetype, any][]).map(
-                  ([archKey, archDef]) => (
+                {(Object.keys(THEME_ARCHETYPES) as ThemeArchetype[]).map((key) => {
+                  const arch = THEME_ARCHETYPES[key];
+                  const isSelected = vibe === key;
+                  return (
                     <button
-                      key={archKey}
-                      onClick={() => setVibe(archKey)}
-                      className={`p-3 rounded-lg border text-left transition-all text-xs ${
-                        vibe === archKey
-                          ? "border-primary bg-primary/10 font-bold ring-1 ring-primary"
-                          : "border-border hover:bg-muted"
+                      key={key}
+                      type="button"
+                      onClick={() => setVibe(key)}
+                      className={`p-2.5 rounded-lg border text-left text-xs font-semibold transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                          : "border-border/60 hover:bg-muted text-foreground"
                       }`}
                     >
-                      <p className="font-semibold text-foreground">{archDef.name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-                        {archDef.description}
-                      </p>
+                      {arch.name}
                     </button>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
 
-            {/* 2. Font Pairing */}
+            {/* Typography */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Type className="h-3.5 w-3.5" />
-                2. Font Pairing
-              </Label>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Type className="h-3.5 w-3.5 text-primary" />
+                Typography
+              </label>
               <div className="grid grid-cols-2 gap-2">
-                {(Object.entries(FONT_PAIRINGS) as [FontPairing, any][]).map(
-                  ([fontKey, fontDef]) => (
+                {(Object.keys(FONT_PAIRINGS) as FontPairing[]).map((key) => {
+                  const font = FONT_PAIRINGS[key];
+                  const isSelected = fontPairing === key;
+                  return (
                     <button
-                      key={fontKey}
-                      onClick={() => setFontPairing(fontKey)}
-                      className={`p-2.5 rounded-lg border text-left transition-all text-xs ${
-                        fontPairing === fontKey
-                          ? "border-primary bg-primary/10 font-bold ring-1 ring-primary"
-                          : "border-border hover:bg-muted"
+                      key={key}
+                      type="button"
+                      onClick={() => setFontPairing(key)}
+                      className={`p-2 rounded-lg border text-left text-xs font-semibold transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                          : "border-border/60 hover:bg-muted text-foreground"
                       }`}
                     >
-                      <p className="font-semibold text-foreground">{fontDef.name}</p>
+                      {font.name}
                     </button>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
 
-            {/* 3. Color Palette */}
+            {/* Color Palette */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Palette className="h-3.5 w-3.5" />
-                3. Color Preset
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.entries(COLOR_PRESETS) as [ColorPreset, any][]).map(
-                  ([colKey, colDef]) => (
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5 text-primary" />
+                Accent Color
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(COLOR_PRESETS) as ColorPreset[]).map((key) => {
+                  const cp = COLOR_PRESETS[key];
+                  const isSelected = colorPreset === key;
+                  return (
                     <button
-                      key={colKey}
-                      onClick={() => setColorPreset(colKey)}
-                      className={`p-2 rounded-lg border flex items-center gap-2 transition-all text-xs ${
-                        colorPreset === colKey
-                          ? "border-primary bg-primary/10 font-bold ring-1 ring-primary"
-                          : "border-border hover:bg-muted"
+                      key={key}
+                      type="button"
+                      onClick={() => setColorPreset(key)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-2 transition-all ${
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/20 bg-muted"
+                          : "border-border/60 hover:bg-muted/50 text-foreground"
                       }`}
                     >
-                      <div
-                        className="h-4 w-4 rounded-full shrink-0 shadow-sm"
-                        style={{ backgroundColor: colDef.primary }}
+                      <span
+                        className="h-3 w-3 rounded-full"
+                        style={{
+                          backgroundColor:
+                            key === "slate"
+                              ? "#1e293b"
+                              : key === "rose"
+                              ? "#e11d48"
+                              : key === "amber"
+                              ? "#d97706"
+                              : key === "emerald"
+                              ? "#059669"
+                              : "#4f46e5",
+                        }}
                       />
-                      <span className="truncate">{colDef.name.split(" ")[1] || colDef.name}</span>
+                      <span>{cp.name}</span>
                     </button>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
 
-            {/* 4. Dark Mode Switch Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Moon className="h-4 w-4 text-primary" />
-                <div>
-                  <p className="text-xs font-semibold">Storefront Dark Mode Toggle</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Allow visitors to switch between light and dark mode
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={enableDarkModeToggle}
-                onChange={(e) => setEnableDarkModeToggle(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-              />
-            </div>
-
-            {/* 5. Brand Slogan & Story */}
+            {/* Copy Edits */}
             <div className="space-y-3 pt-2 border-t border-border/60">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Tagline / Slogan</Label>
+                <Label className="text-xs font-semibold text-foreground">Hero Tagline</Label>
                 <Input
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  className="h-9 text-xs"
+                  className="text-xs"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Store Story / Description</Label>
-                <Input
+                <Label className="text-xs font-semibold text-foreground">Brand Philosophy</Label>
+                <textarea
+                  rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="h-9 text-xs"
+                  className="w-full p-2.5 rounded-lg border border-border bg-background text-xs leading-relaxed"
                 />
               </div>
             </div>
 
-            {/* Launch Action */}
-            <div className="pt-4 border-t border-border">
-              <Button
-                className="w-full h-11 font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                onClick={handleProceedToLaunch}
-                disabled={isPublishing}
-              >
-                {isPublishing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Publishing Store...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="h-4 w-4" />
-                    Save & Launch My Store
-                  </>
-                )}
-              </Button>
+            {/* Dark Mode Toggle */}
+            <div className="flex items-center space-x-2 pt-2">
+              <input
+                type="checkbox"
+                id="enableDarkMode"
+                checked={enableDarkModeToggle}
+                onChange={(e) => setEnableDarkModeToggle(e.target.checked)}
+                className="rounded border-border h-4 w-4 text-primary focus:ring-primary"
+              />
+              <label htmlFor="enableDarkMode" className="text-xs font-medium text-muted-foreground">
+                Enable visitor dark mode switch
+              </label>
             </div>
+
+            <Button
+              size="lg"
+              className="w-full h-12 font-bold text-sm gap-2 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white mt-4"
+              onClick={handleProceedToLaunch}
+              disabled={isPublishing}
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Publishing Store...
+                </>
+              ) : (
+                <>
+                  <Rocket className="h-4 w-4" />
+                  Save & Launch My Store
+                </>
+              )}
+            </Button>
           </div>
 
-          {/* Right Live Preview Panel */}
-          <div className="lg:col-span-7 h-full overflow-y-auto bg-muted/20 border-l border-border">
+          {/* Right Panel: Live Storefront Preview */}
+          <div className="lg:col-span-8 overflow-y-auto max-h-[calc(100vh-65px)] bg-muted/20">
             <StorefrontView
               store={previewStore}
               products={previewProducts}
@@ -698,115 +689,94 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* AUTH GATE MODAL: Claim & Launch Store */}
+      {/* AUTH GATE MODAL */}
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-2">
-              <Lock className="h-6 w-6" />
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader className="space-y-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-2 mx-auto sm:mx-0">
+              <Rocket className="h-6 w-6" />
             </div>
-            <DialogTitle className="text-center text-xl font-bold">
-              {authMode === "register" ? "Create Account to Claim Store" : "Sign In to Your Account"}
+            <DialogTitle className="text-xl font-bold">
+              {authMode === "register" ? "Create Account to Launch Store" : "Sign In to Launch Store"}
             </DialogTitle>
-            <DialogDescription className="text-center text-xs text-muted-foreground">
-              {authMode === "register"
-                ? `Save "${storeName}" to your merchant dashboard permanently.`
-                : "Sign in to connect this store to your existing account."}
+            <DialogDescription className="text-xs leading-relaxed">
+              Your customized store is ready. Register or log in with your email to connect your merchant dashboard and receive orders.
             </DialogDescription>
           </DialogHeader>
 
           {authError && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive font-medium">
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-xs">
               {authError}
             </div>
           )}
 
           <form onSubmit={handleAuthSubmit} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Email Address</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Merchant Email Address</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="email"
+                  required
                   placeholder="merchant@example.com"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  className="pl-9 h-10 text-sm"
-                  required
+                  className="pl-9 h-10 text-xs"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">Password</Label>
               <div className="relative">
-                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="password"
+                  required
+                  minLength={6}
                   placeholder="••••••••"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  className="pl-9 h-10 text-sm"
-                  required
+                  className="pl-9 h-10 text-xs"
                 />
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full h-11 font-bold gap-2 bg-primary text-primary-foreground shadow-md"
-              disabled={isAuthLoading}
-            >
-              {isAuthLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving & Launching...
-                </>
-              ) : authMode === "register" ? (
-                <>
-                  <Rocket className="h-4 w-4" />
-                  Create Account & Launch Store
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4" />
-                  Sign In & Launch Store
-                </>
-              )}
-            </Button>
-          </form>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setAuthMode(authMode === "register" ? "login" : "register");
+                  setAuthError(null);
+                }}
+                className="text-xs font-semibold"
+              >
+                {authMode === "register"
+                  ? "Already have an account? Sign In"
+                  : "Need an account? Create one"}
+              </Button>
 
-          <div className="text-center pt-2 border-t border-border/50 text-xs text-muted-foreground">
-            {authMode === "register" ? (
-              <p>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("login");
-                    setAuthError(null);
-                  }}
-                  className="font-bold text-primary hover:underline"
-                >
-                  Sign In
-                </button>
-              </p>
-            ) : (
-              <p>
-                Need a new account?{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("register");
-                    setAuthError(null);
-                  }}
-                  className="font-bold text-primary hover:underline"
-                >
-                  Create Account
-                </button>
-              </p>
-            )}
-          </div>
+              <Button
+                type="submit"
+                disabled={isAuthLoading}
+                className="gap-2 font-bold text-xs h-10 px-6 bg-primary text-primary-foreground shadow-md"
+              >
+                {isAuthLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-3.5 w-3.5" />
+                    {authMode === "register" ? "Create & Launch Store" : "Sign In & Launch Store"}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -1405,22 +1405,22 @@ export default function DashboardPage() {
                     {
                       id: "editorial",
                       name: "Editorial Luxury",
-                      desc: "Layla inspired: High-end luxury magazine aesthetic, serif accents & rich storytelling cards.",
+                      desc: "High-end luxury magazine aesthetic, refined serif accents, and immersive brand storytelling.",
                     },
                     {
                       id: "bold",
                       name: "Streetwear Bold",
-                      desc: "Veirdo inspired: High-energy contrast, punchy badges, sharp borders & modern streetwear vibe.",
+                      desc: "High-energy contrast, punchy product badges, sharp borders, and modern streetwear aesthetic.",
                     },
                     {
                       id: "warm",
                       name: "Warm Organic",
-                      desc: "Atomishine inspired: Ambient terracotta surfaces, gentle rounded curves & artisanal warmth.",
+                      desc: "Warm terracotta ambient surfaces, gentle rounded curves, and handcrafted artisanal charm.",
                     },
                     {
                       id: "minimal",
                       name: "Minimal Clean",
-                      desc: "Clean monochrome whitespace, borderless product cards & ultra-modern sleekness.",
+                      desc: "Crisp monochrome whitespace, borderless product cards, and modern simplicity.",
                     },
                   ].map((arch) => (
                     <button

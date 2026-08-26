@@ -1,20 +1,20 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("SimpleStore End-to-End User Journey", () => {
-  test("Homepage loads and displays telemetry, interactive sandbox, and theme toggle", async ({ page }) => {
+  test("Homepage loads with clear value proposition, interactive sandbox, and theme toggle", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/SimpleStore/i);
-    await expect(page.locator("h1")).toContainText("Sell online in 5 minutes");
+    await expect(page.locator("h1")).toContainText("Turn your passion into a thriving online store");
 
-    // Telemetry section
-    await expect(page.getByText(/Live Monolith Infrastructure Health/i)).toBeVisible();
-    await expect(page.getByText("PostgreSQL 16", { exact: true })).toBeVisible();
-    await expect(page.getByText("Redis 7", { exact: true })).toBeVisible();
+    // Value pillars
+    await expect(page.getByText(/Built for Modern Merchants/i)).toBeVisible();
+    await expect(page.getByText("Pre-Built Luxury Aesthetics", { exact: true })).toBeVisible();
+    await expect(page.getByText("Cash on Delivery & Instant Checkout", { exact: true })).toBeVisible();
 
     // Interactive Sandbox is present
-    await expect(page.getByText(/Test the Deterministic Design Matrix/i)).toBeVisible();
-    await page.click("button:has-text('Editorial Luxury')");
-    await page.click("button:has-text('Emerald')");
+    await expect(page.getByText(/Test your store’s look and feel/i)).toBeVisible();
+    await page.locator("button:has-text('Streetwear Bold')").first().click();
+    await page.locator("button:has-text('Forest Emerald')").first().click();
 
     // Dark Mode Toggle works
     const themeBtn = page.getByRole("button", { name: /Toggle theme/i });
@@ -35,25 +35,24 @@ test.describe("SimpleStore End-to-End User Journey", () => {
 
     // Fill questionnaire
     const timestamp = Date.now();
-    await page.fill("#sname", `Artisan Candles ${timestamp}`);
-    await page.fill("#scat", "Handmade Scented Candles");
-    await page.fill("#sprod", "Organic soy wax candles infused with lavender and amber.");
+    await page.fill("#storeName", `Artisan Candles ${timestamp}`);
+    await page.fill("#category", "Handmade Scented Candles");
+    await page.fill("#productSummary", "Organic soy wax candles infused with lavender and amber.");
 
     // Click Generate Button
-    await page.click("button:has-text('Generate Sample Preview')");
+    await page.click("button:has-text('Build Live Store Preview')");
 
-    // Wait for AI generation & theme matrix split screen
-    await expect(page.getByText(/Theme & Design Matrix/i)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Live Storefront Preview/i)).toBeVisible();
+    // Wait for split-screen customizer
+    await expect(page.getByText(/Customize Storefront/i)).toBeVisible({ timeout: 15000 });
 
     // Click Save & Launch Store -> Opens Auth Gate Modal
     await page.click("button:has-text('Save & Launch My Store')");
-    await expect(page.getByText(/Create Account to Claim Store/i)).toBeVisible();
+    await expect(page.getByText(/Create Account to Launch Store/i)).toBeVisible();
 
     // Fill Auth Gate Modal registration form
     await page.fill("input[placeholder='merchant@example.com']", `merchant-${timestamp}@example.com`);
     await page.fill("input[placeholder='••••••••']", "Password123!");
-    await page.click("button:has-text('Create Account & Launch Store')");
+    await page.click("button:has-text('Create & Launch Store')");
 
     // Should redirect to Merchant Dashboard Hub
     await expect(page).toHaveURL(/.*\/dashboard.*/, { timeout: 15000 });

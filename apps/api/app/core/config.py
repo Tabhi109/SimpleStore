@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env", "../../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    @computed_field
+    def computed_redis_url(self) -> str:
+        if self.REDIS_HOST in ("redis", "simplestore_redis"):
+            return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        if self.REDIS_URL:
+            return self.REDIS_URL
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
     # Security & Auth
     JWT_SECRET_KEY: str = "development_jwt_secret_key_super_secure_and_long_enough_for_hs256"

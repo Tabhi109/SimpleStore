@@ -84,6 +84,17 @@ export interface OnboardingGeneratedResponse {
   starter_products: StarterProductDraft[];
 }
 
+export interface OnboardingGenerationResult {
+  tagline: string;
+  description: string;
+  theme_recommendation: {
+    archetype: ThemeArchetype;
+    font_pairing: FontPairing;
+    color_preset: ColorPreset;
+  };
+  starter_products: StarterProductDraft[];
+}
+
 // -----------------------------------------------------------------------------
 // Store
 // -----------------------------------------------------------------------------

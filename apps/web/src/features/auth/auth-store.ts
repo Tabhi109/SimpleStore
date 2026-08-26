@@ -41,7 +41,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       isAuthenticated: () => {
-        return !!get().token;
+        const state = get();
+        return !!state.token && !!state.user && !state.user.email?.endsWith("@simplestore.demo");
       },
     }),
     {
@@ -49,6 +50,11 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? localStorage : noopStorage
       ),
+      onRehydrateStorage: () => (state) => {
+        if (state?.user?.email?.endsWith("@simplestore.demo")) {
+          state.logout();
+        }
+      },
     }
   )
 );

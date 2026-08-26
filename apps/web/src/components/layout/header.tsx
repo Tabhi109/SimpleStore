@@ -26,7 +26,6 @@ export function Header() {
   const { user, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile drawer on route change
   React.useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
@@ -46,33 +45,14 @@ export function Header() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground shadow-sm shadow-primary/20 group-hover:scale-105 transition-transform">
               <Store className="h-4.5 w-4.5" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg leading-tight tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
-                SimpleStore
-              </span>
-            </div>
+            <span className="font-extrabold text-lg leading-tight tracking-tight text-foreground">
+              SimpleStore
+            </span>
           </Link>
-          <Badge
-            variant="outline"
-            className="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 border-primary/30 bg-primary/5 text-primary rounded-full"
-          >
-            Portfolio
-          </Badge>
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1.5 lg:gap-3 text-sm font-medium">
-          <a
-            href="http://localhost:8000/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
-            <Code2 className="h-3.5 w-3.5 text-amber-500" />
-            <span>API Docs</span>
-            <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-          </a>
-
+        <nav className="hidden md:flex items-center gap-2 lg:gap-3 text-sm font-medium">
           <Link
             href="/dashboard"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -92,7 +72,7 @@ export function Header() {
                   {user.email}
                 </span>
                 <span className="text-[9px] text-emerald-500 font-semibold uppercase">
-                  Logged In
+                  Merchant
                 </span>
               </div>
               <Button
@@ -115,18 +95,16 @@ export function Header() {
             >
               <Link href="/auth/login">
                 <User className="h-3.5 w-3.5 mr-1" />
-                Merchant Login
+                Merchant Sign In
               </Link>
             </Button>
           )}
 
-          {/* Theme Toggle Button */}
           <ThemeToggle />
 
-          {/* Primary CTA */}
           <Button
             size="sm"
-            className="gap-1.5 text-xs font-bold h-9 px-3.5 shadow-sm shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="gap-1.5 text-xs font-bold h-9 px-4 shadow-sm shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
             asChild
           >
             <Link href="/onboarding">
@@ -176,16 +154,6 @@ export function Header() {
               <LayoutDashboard className="h-4 w-4" />
               Merchant Dashboard
             </Link>
-            <a
-              href="http://localhost:8000/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <Code2 className="h-4 w-4 text-amber-500" />
-              FastAPI Interactive Docs
-              <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
-            </a>
           </div>
 
           <div className="pt-3 border-t border-border/60 flex flex-col gap-2">
@@ -216,7 +184,7 @@ export function Header() {
               >
                 <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
                   <User className="h-3.5 w-3.5 mr-2" />
-                  Merchant Login
+                  Merchant Sign In
                 </Link>
               </Button>
             )}
@@ -228,7 +196,7 @@ export function Header() {
             >
               <Link href="/onboarding" onClick={() => setMobileMenuOpen(false)}>
                 <Rocket className="h-4 w-4" />
-                Start 5-Minute Setup Free
+                Start Your Store Free
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>

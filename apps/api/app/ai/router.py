@@ -9,7 +9,7 @@ from app.ai.service import (
     ai_service,
 )
 from app.auth.models import User
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user_optional
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 )
 async def generate_store_from_questionnaire(
     payload: OnboardingQuestionnaireInput,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     """Generates tagline, store description, theme recommendation, and starter product drafts."""
     return await ai_service.generate_store_from_questionnaire(payload)
@@ -33,7 +33,7 @@ async def generate_store_from_questionnaire(
 )
 async def generate_product_description(
     payload: ProductDescriptionInput,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     """Generates engaging product copy for the 'Write it for me' button."""
     content = await ai_service.generate_product_description(payload)

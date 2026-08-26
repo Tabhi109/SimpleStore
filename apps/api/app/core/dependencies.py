@@ -18,7 +18,7 @@ security_scheme = HTTPBearer(auto_error=False)
 
 # Shared async Redis connection pool
 redis_pool = aioredis.ConnectionPool.from_url(
-    settings.REDIS_URL,
+    settings.computed_redis_url,
     decode_responses=True,
     max_connections=20,
 )
