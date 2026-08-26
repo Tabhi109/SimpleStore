@@ -13,7 +13,7 @@ test.describe("SimpleStore End-to-End User Journey", () => {
 
     // Interactive Sandbox is present
     await expect(page.getByText(/Test your store’s look and feel/i)).toBeVisible();
-    await page.locator("button:has-text('Streetwear Bold')").first().click();
+    await page.locator("button:has-text('Bold High-Contrast')").first().click();
     await page.locator("button:has-text('Forest Emerald')").first().click();
 
     // Dark Mode Toggle works

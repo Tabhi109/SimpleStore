@@ -205,6 +205,7 @@ export default function OnboardingPage() {
         "/stores",
         {
           name: storeName.trim(),
+          slug: storeName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
           category: category.trim(),
           tagline: tagline.trim(),
           description: description.trim(),

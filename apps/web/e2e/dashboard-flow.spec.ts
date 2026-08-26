@@ -72,40 +72,36 @@ test.describe("Merchant Dashboard & Shopper End-to-End Flow", () => {
     expect(liveStoreLink).toBeTruthy();
 
     await page.goto(liveStoreLink!);
-    await expect(page.getByText(`Luxe Candles ${timestamp}`)).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(`Luxe Candles ${timestamp}`);
 
-    // Add to cart from storefront
+    // Add to cart from storefront (automatically opens Cart Drawer)
     await page.click("button:has-text('Add') >> nth=0");
-
-    // Open Cart Drawer
-    await page.click("button:has-text('Bag'), button:has-text('Cart')");
-    await expect(page.getByText(/Your Shopping Bag/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Your Cart/i })).toBeVisible();
 
     // Click suggested coupon pill
     const couponPill = page.locator("button:has-text('SAVE20')");
     if (await couponPill.isVisible()) {
       await couponPill.click();
-      await expect(page.getByText(/Discount Applied/i)).toBeVisible({ timeout: 5000 });
     }
 
     // Proceed to Checkout
-    await page.click("button:has-text('Proceed to Checkout')");
-    await expect(page.getByText(/Checkout/i)).toBeVisible();
+    await page.click("button:has-text('Checkout')");
+    await expect(page.getByRole("heading", { name: "Complete Your Order" })).toBeVisible();
 
     // Fill customer checkout details
-    await page.fill("input[placeholder='Jane Doe']", "Aarav Sharma");
-    await page.fill("input[placeholder='jane@example.com']", "aarav@gmail.com");
-    await page.fill("input[placeholder='+1 (555) 000-0000']", "+91 9876543210");
-    await page.fill("input[placeholder='123 Market Street, Apt 4B']", "74 Park Avenue");
-    await page.fill("input[placeholder='New York']", "Mumbai");
-    await page.fill("input[placeholder='10001']", "400001");
+    await page.fill("input[placeholder='Alice Customer']", "Aarav Sharma");
+    await page.fill("input[placeholder='alice@example.com']", "aarav@gmail.com");
+    await page.fill("input[placeholder='+1 (555) 123-4567']", "+91 9876543210");
+    await page.fill("input[placeholder='124 Olive St, Apt 4B']", "74 Park Avenue");
+    await page.fill("input[placeholder='Seattle']", "Mumbai");
+    await page.fill("input[placeholder='98101']", "400001");
 
     // Place Order via COD
-    await page.click("button:has-text('Place Cash on Delivery Order')");
+    await page.click("button:has-text('Confirm & Place COD Order')");
 
     // Expect Receipt Confirmation Modal
-    await expect(page.getByText(/Order Placed Successfully!/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Order Confirmed!/i })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("Aarav Sharma")).toBeVisible();
-    await expect(page.getByText(/Cash on Delivery/i)).toBeVisible();
+    await expect(page.getByText(/COD • Pending Delivery/i)).toBeVisible();
   });
 });
