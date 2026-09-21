@@ -126,16 +126,18 @@ class CouponService:
         store_id: uuid.UUID,
         code: str,
         cart_total: Decimal,
+        lock: bool = False,
     ) -> tuple[bool, Decimal, Decimal, str]:
         """Validate coupon code and return (is_valid, discount_amount, final_total, message)."""
         clean_code = code.upper().strip()
-        result = await db.execute(
-            select(Coupon).where(
-                Coupon.store_id == store_id,
-                Coupon.code == clean_code,
-                Coupon.is_active.is_(True),
-            )
+        stmt = select(Coupon).where(
+            Coupon.store_id == store_id,
+            Coupon.code == clean_code,
+            Coupon.is_active.is_(True),
         )
+        if lock:
+            stmt = stmt.with_for_update()
+        result = await db.execute(stmt)
         coupon = result.scalar_one_or_none()
         if not coupon:
             return False, Decimal("0.00"), cart_total, "Invalid or expired coupon code."

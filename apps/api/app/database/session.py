@@ -6,23 +6,23 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
-# Engine configuration
-connect_args = {}
-if "ssl=" in settings.async_database_url or "neon.tech" in settings.async_database_url:
+connect_args: dict = {}
+if settings.uses_neon or "ssl=" in settings.async_database_url:
     connect_args["ssl"] = True
+if settings.uses_neon_pooler:
+    # Neon pooler (PgBouncer) cannot share asyncpg prepared-statement caches.
+    connect_args["statement_cache_size"] = 0
 
-# Async Engine for PostgreSQL
 engine = create_async_engine(
     settings.async_database_url,
     echo=settings.DEBUG and settings.ENVIRONMENT == "development",
     future=True,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5 if settings.uses_neon else 10,
+    max_overflow=10 if settings.uses_neon else 20,
     connect_args=connect_args,
 )
 
-# Async Session Factory
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,

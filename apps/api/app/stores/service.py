@@ -25,6 +25,13 @@ def slugify(text: str) -> str:
     return text or f"store-{uuid.uuid4().hex[:6]}"
 
 
+def is_demo_owner(user: User | None) -> bool:
+    if not user or not user.email:
+        return False
+    email = user.email.lower()
+    return email.endswith("@simplestore.demo") or email.startswith("creator-")
+
+
 class StoreService:
     """Service handling store CRUD, theme configuration, and AI generation."""
 
@@ -79,7 +86,7 @@ class StoreService:
         store_id: uuid.UUID,
         owner_id: uuid.UUID | None = None,
     ) -> Store:
-        """Get store by ID, optionally verifying ownership or auto-transferring from demo owner."""
+        """Get store by ID, optionally verifying ownership."""
         result = await db.execute(select(Store).where(Store.id == store_id))
         store = result.scalar_one_or_none()
         if not store:
@@ -88,18 +95,10 @@ class StoreService:
                 detail="Store not found.",
             )
         if owner_id and store.owner_id != owner_id:
-            # Check if store belongs to an anonymous creator session
-            prev_user_res = await db.execute(select(User).where(User.id == store.owner_id))
-            prev_user = prev_user_res.scalar_one_or_none()
-            if prev_user and (prev_user.email.endswith("@simplestore.demo") or prev_user.email.startswith("creator-")):
-                store.owner_id = owner_id
-                await db.commit()
-                await db.refresh(store)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You do not have permission to modify this store.",
-                )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to modify this store.",
+            )
         return store
 
     async def claim_store(
@@ -108,7 +107,7 @@ class StoreService:
         store_id: uuid.UUID,
         new_owner_id: uuid.UUID,
     ) -> Store:
-        """Claim ownership of an onboarding store."""
+        """Claim ownership of a demo/onboarding store only."""
         result = await db.execute(select(Store).where(Store.id == store_id))
         store = result.scalar_one_or_none()
         if not store:
@@ -116,15 +115,27 @@ class StoreService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Store not found.",
             )
+        if store.owner_id == new_owner_id:
+            return store
+
+        prev_user_res = await db.execute(select(User).where(User.id == store.owner_id))
+        prev_user = prev_user_res.scalar_one_or_none()
+        if not is_demo_owner(prev_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This store cannot be claimed.",
+            )
         store.owner_id = new_owner_id
         await db.commit()
         await db.refresh(store)
         return store
 
     async def get_public_store_by_slug(self, db: AsyncSession, slug: str) -> Store:
-        """Fetch public store with published products."""
+        """Fetch published store with published products."""
         result = await db.execute(
-            select(Store).where(Store.slug == slug).options(selectinload(Store.products))
+            select(Store)
+            .where(Store.slug == slug, Store.published.is_(True), Store.is_active.is_(True))
+            .options(selectinload(Store.products))
         )
         store = result.scalar_one_or_none()
         if not store:
@@ -181,16 +192,18 @@ class StoreService:
         questionnaire: OnboardingQuestionnaireInput,
         currency: str = "USD",
         language: str = "en",
+        redis=None,
     ) -> Store:
         """AI-orchestrated store setup: generates brand copy, starter products, and theme config."""
-        # 1. Call AI Service
-        ai_res = await ai_service.generate_store_from_questionnaire(questionnaire)
+        # 1. Call AI Service (Redis-cached)
+        ai_res = await ai_service.generate_store_from_questionnaire(questionnaire, redis=redis)
 
         # 2. Build Theme Config
+        tokens = ai_res.theme_recommendation
         theme_config = {
-            "archetype": ai_res.recommended_theme,
-            "font_pairing": "serif" if ai_res.recommended_theme == "editorial" else "sans",
-            "color_preset": "rose" if ai_res.recommended_theme == "editorial" else "slate",
+            "archetype": tokens.archetype,
+            "font_pairing": tokens.font_pairing,
+            "color_preset": tokens.color_preset,
             "enable_dark_mode_toggle": True,
             "hero_style": "centered",
         }

@@ -1,0 +1,19 @@
+rules:
+  - id: simplestore-jwt-default-secret
+    languages: [python]
+    severity: WARNING
+    message: Default JWT secret must not ship as a production value.
+    pattern: JWT_SECRET_KEY: str = "development_jwt_secret_key_super_secure_and_long_enough_for_hs256"
+
+  - id: simplestore-unauthenticated-order-read
+    languages: [python]
+    severity: ERROR
+    message: Order fetch by ID must require an authenticated merchant.
+    patterns:
+      - pattern: |
+          async def get_order(...):
+              ...
+              return await order_service.get_order_by_id(...)
+      - pattern-not: |
+          async def get_order(..., current_user: User = Depends(get_current_user), ...):
+              ...

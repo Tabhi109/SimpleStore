@@ -253,7 +253,7 @@ export default function DashboardPage() {
 
     setIsUploadingBlob(true);
     try {
-      const res = await apiClient.uploadBlob(file);
+      const res = await apiClient.uploadBlob(file, token || undefined);
       if (res.url) {
         setProdImages((prev) => [...prev, res.url].slice(0, 5));
       }

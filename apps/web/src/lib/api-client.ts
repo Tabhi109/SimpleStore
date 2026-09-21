@@ -131,13 +131,14 @@ export const apiClient = {
     request<T>(endpoint, { ...normalizeOptions(options), method: "DELETE" }),
 
   // Vercel Blob / Static File Upload
-  uploadBlob: async (file: File): Promise<BlobUploadResponse> => {
+    uploadBlob: async (file: File, token?: string): Promise<BlobUploadResponse> => {
     const formData = new FormData();
     formData.append("file", file);
 
     const url = `${API_BASE_URL}/api/v1/uploads/blob`;
     const response = await fetch(url, {
       method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: formData,
     });
 

@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.service import OnboardingQuestionnaireInput
 from app.auth.models import User
-from app.core.dependencies import get_current_user, get_db
+from app.core.config import settings
+from app.core.dependencies import enforce_rate_limit, get_current_user, get_db, get_redis
 from app.stores.schemas import StoreCreateRequest, StoreResponse, StoreUpdateRequest
 from app.stores.service import store_service
 
@@ -63,8 +64,15 @@ async def generate_onboarding_store(
     request: OnboardingGenerateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    redis_client=Depends(get_redis),
 ):
     """Generate complete store copy and starter products from questionnaire."""
+    await enforce_rate_limit(
+        redis_client,
+        "ai",
+        str(current_user.id),
+        settings.AI_RATE_LIMIT_AUTH_PER_HOUR,
+    )
     questionnaire = OnboardingQuestionnaireInput(
         store_name=request.store_name,
         category=request.category,
@@ -78,6 +86,7 @@ async def generate_onboarding_store(
         questionnaire=questionnaire,
         currency=request.currency,
         language=request.language,
+        redis=redis_client,
     )
 
 
@@ -106,18 +115,23 @@ async def get_public_store(
         "products": [
             {
                 "id": p.id,
+                "store_id": p.store_id,
                 "name": p.name,
                 "slug": p.slug,
                 "description": p.description,
                 "price": float(p.price),
+                "mrp": float(p.mrp) if p.mrp is not None else None,
                 "currency": p.currency,
                 "inventory": p.inventory,
+                "order_limit": p.order_limit,
                 "image_url": p.image_url,
+                "images": p.images or [],
                 "is_ai_generated": p.is_ai_generated,
+                "is_active": p.is_active,
                 "published": p.published,
             }
             for p in store.products
-            if p.published
+            if p.published and p.is_active
         ],
     }
 

@@ -61,3 +61,19 @@ jobs:
         run: |
           cd apps/web
           npm run lint
+
+  semgrep-sast:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config .semgrep.yml \
+            --severity ERROR \
+            --error

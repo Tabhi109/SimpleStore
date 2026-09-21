@@ -38,6 +38,8 @@ services:
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       SARVAM_API_KEY: ${SARVAM_API_KEY}
+      NEON_DB_URL: ${NEON_DB_URL:-}
+      BLOB_READ_WRITE_TOKEN: ${BLOB_READ_WRITE_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

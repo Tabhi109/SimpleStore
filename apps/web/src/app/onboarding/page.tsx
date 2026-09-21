@@ -174,7 +174,7 @@ export default function OnboardingPage() {
     if (!file) return;
     setIsUploadingLogo(true);
     try {
-      const res = await apiClient.uploadBlob(file);
+      const res = await apiClient.uploadBlob(file, token || undefined);
       if (res?.url) setLogoUrl(res.url);
     } catch (err: any) {
       console.warn("Direct blob upload fallback, using object URL:", err);
@@ -190,7 +190,7 @@ export default function OnboardingPage() {
     if (!file) return;
     setIsUploadingProductPhotoIndex(index);
     try {
-      const res = await apiClient.uploadBlob(file);
+      const res = await apiClient.uploadBlob(file, token || undefined);
       const url = res?.url || URL.createObjectURL(file);
       updateProductField(index, "image_url", url);
       const currentImages = starterProducts[index].images || [];

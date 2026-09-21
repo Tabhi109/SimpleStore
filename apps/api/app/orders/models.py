@@ -6,7 +6,15 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
@@ -17,6 +25,7 @@ if TYPE_CHECKING:
 
 class Order(Base, TimestampMixin):
     __tablename__ = "orders"
+    __table_args__ = (UniqueConstraint("store_id", "order_number", name="uq_store_order_number"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),

@@ -1,5 +1,6 @@
 """AI endpoints for store generation and copy assistance."""
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 
 from app.ai.service import (
@@ -9,7 +10,7 @@ from app.ai.service import (
     ai_service,
 )
 from app.auth.models import User
-from app.core.dependencies import get_current_user_optional
+from app.core.dependencies import enforce_ai_rate_limit, get_redis
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -21,10 +22,12 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 )
 async def generate_store_from_questionnaire(
     payload: OnboardingQuestionnaireInput,
-    current_user: User | None = Depends(get_current_user_optional),
+    redis_client: aioredis.Redis = Depends(get_redis),
+    current_user: User | None = Depends(enforce_ai_rate_limit),
 ):
     """Generates tagline, store description, theme recommendation, and starter product drafts."""
-    return await ai_service.generate_store_from_questionnaire(payload)
+    _ = current_user
+    return await ai_service.generate_store_from_questionnaire(payload, redis=redis_client)
 
 
 @router.post(
@@ -33,8 +36,10 @@ async def generate_store_from_questionnaire(
 )
 async def generate_product_description(
     payload: ProductDescriptionInput,
-    current_user: User | None = Depends(get_current_user_optional),
+    redis_client: aioredis.Redis = Depends(get_redis),
+    current_user: User | None = Depends(enforce_ai_rate_limit),
 ):
     """Generates engaging product copy for the 'Write it for me' button."""
-    content = await ai_service.generate_product_description(payload)
+    _ = current_user
+    content = await ai_service.generate_product_description(payload, redis=redis_client)
     return {"description": content}

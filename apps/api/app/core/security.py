@@ -27,7 +27,8 @@ def create_access_token(subject: str | Any, extra_claims: dict[str, Any] | None 
     expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject), "type": "access"}
     if extra_claims:
-        to_encode.update(extra_claims)
+        reserved = {"exp", "sub", "type"}
+        to_encode.update({k: v for k, v in extra_claims.items() if k not in reserved})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 

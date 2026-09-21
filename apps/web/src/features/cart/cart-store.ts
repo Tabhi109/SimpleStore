@@ -6,6 +6,7 @@ import { CartItem, Product, StoreCurrency } from "@simplestore/shared-types";
 
 interface CartState {
   items: CartItem[];
+  storeId: string | null;
   isOpen: boolean;
   couponCode: string | null;
   discountAmount: number;
@@ -36,6 +37,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      storeId: null,
       isOpen: false,
       couponCode: null,
       discountAmount: 0,
@@ -43,10 +45,14 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: Product, quantity = 1) => {
         set((state) => {
-          const existing = state.items.find((item) => item.product_id === product.id);
+          const nextStoreId = product.store_id || state.storeId;
+          const items =
+            state.storeId && nextStoreId && state.storeId !== nextStoreId ? [] : state.items;
+          const existing = items.find((item) => item.product_id === product.id);
           if (existing) {
             return {
-              items: state.items.map((item) =>
+              storeId: nextStoreId,
+              items: items.map((item) =>
                 item.product_id === product.id
                   ? { ...item, quantity: item.quantity + quantity }
                   : item
@@ -55,8 +61,9 @@ export const useCartStore = create<CartState>()(
             };
           }
           return {
+            storeId: nextStoreId,
             items: [
-              ...state.items,
+              ...items,
               {
                 product_id: product.id,
                 product_name: product.name,
@@ -94,7 +101,7 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => {
-        set({ items: [], couponCode: null, discountAmount: 0 });
+        set({ items: [], storeId: null, couponCode: null, discountAmount: 0 });
       },
 
       setIsOpen: (isOpen: boolean) => {

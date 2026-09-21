@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,7 +128,7 @@ async def health_check(
     is_healthy = db_connected and redis_connected
     system_status = "healthy" if is_healthy else "degraded"
 
-    return {
+    payload = {
         "status": system_status,
         "version": "0.1.0",
         "app_name": settings.APP_NAME,
@@ -135,7 +136,7 @@ async def health_check(
         "timestamp": datetime.now(UTC).isoformat(),
         "database": {
             "connected": db_connected,
-            "provider": "Neon Serverless" if settings.NEON_DB_URL else "Local PostgreSQL",
+            "provider": "Neon Serverless" if settings.uses_neon else "Local PostgreSQL",
             "latency_ms": db_latency_ms,
         },
         "redis": {
@@ -150,8 +151,10 @@ async def health_check(
             "configured": ai_provider.is_configured,
             "provider": "Sarvam AI",
             "model": settings.SARVAM_MODEL,
+            "cache": "redis",
         },
     }
+    return JSONResponse(content=payload, status_code=200 if is_healthy else 503)
 
 
 # Mount Routers

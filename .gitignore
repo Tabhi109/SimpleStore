@@ -57,6 +57,5 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Static & Upload Assets (Mock local storage)
-uploads/
-storage/
+# Static & Upload Assets (local disk fallback at repo root)
+/uploads/

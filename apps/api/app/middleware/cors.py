@@ -43,14 +43,18 @@ def setup_middleware(app: FastAPI) -> None:
     app.add_middleware(SecurityHeadersMiddleware)
 
     # CORS (Outermost - added last so it processes preflight OPTIONS and response headers first)
+    from app.core.config import settings
+
+    origins = settings.BACKEND_CORS_ORIGINS or [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    if settings.PROJECT_URL and settings.PROJECT_URL not in origins:
+        origins.append(settings.PROJECT_URL)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:8000",
-            "http://127.0.0.1:8000",
-        ],
+        allow_origins=origins,
         allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
         allow_credentials=True,
         allow_methods=["*"],

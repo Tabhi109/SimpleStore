@@ -50,14 +50,15 @@ async def get_store_orders(
 @router.get(
     "/orders/{order_id}",
     response_model=OrderResponse,
-    summary="Get single order details (receipt)",
+    summary="Get single order details (merchant)",
 )
 async def get_order(
     order_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Fetch order details for confirmation receipt."""
-    return await order_service.get_order_by_id(db, order_id)
+    """Fetch order details. Merchants can only view orders for stores they own."""
+    return await order_service.get_order_by_id(db, order_id, owner_id=current_user.id)
 
 
 @router.get(

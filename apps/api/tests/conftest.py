@@ -37,6 +37,15 @@ class MockRedis:
     async def ping(self):
         return True
 
+    async def incr(self, key: str):
+        current = int(self.store.get(key) or 0)
+        current += 1
+        self.store[key] = str(current)
+        return current
+
+    async def expire(self, key: str, seconds: int):
+        return True
+
     async def get(self, key: str):
         return self.store.get(key)
 

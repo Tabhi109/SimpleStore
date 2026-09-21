@@ -35,6 +35,11 @@ class OrderService:
         """Transaction-safe order placement with row locking and server price recalculation."""
         # 1. Fetch store
         store = await store_service.get_store_by_id(db, store_id)
+        if not store.published or not store.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This store is not currently accepting orders.",
+            )
 
         if not request.items:
             raise HTTPException(
@@ -76,6 +81,12 @@ class OrderService:
 
         for p_id, requested_qty in product_qty_map.items():
             product = products[p_id]
+            if not product.is_active or not product.published:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Product '{product.name}' is not available for purchase.",
+                )
+
             if product.order_limit and requested_qty > product.order_limit:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -111,21 +122,24 @@ class OrderService:
         applied_coupon_code = None
 
         if request.coupon_code:
-            is_valid, disc, _, _ = await coupon_service.validate_coupon(
-                db, store_id, request.coupon_code, subtotal_amount
+            is_valid, disc, _, message = await coupon_service.validate_coupon(
+                db, store_id, request.coupon_code, subtotal_amount, lock=True
             )
-            if is_valid:
-                discount_amount = disc
-                applied_coupon_code = request.coupon_code.upper().strip()
-                # Increment usage count
-                coup_res = await db.execute(
-                    select(Coupon).where(
-                        Coupon.store_id == store_id, Coupon.code == applied_coupon_code
-                    )
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=message or "Invalid coupon code.",
                 )
-                coup = coup_res.scalar_one_or_none()
-                if coup:
-                    coup.usage_count += 1
+            discount_amount = disc
+            applied_coupon_code = request.coupon_code.upper().strip()
+            coup_res = await db.execute(
+                select(Coupon)
+                .where(Coupon.store_id == store_id, Coupon.code == applied_coupon_code)
+                .with_for_update()
+            )
+            coup = coup_res.scalar_one_or_none()
+            if coup:
+                coup.usage_count += 1
 
         total_amount = max(Decimal("0.00"), subtotal_amount - discount_amount)
 
@@ -149,7 +163,7 @@ class OrderService:
             currency=store.currency,
             payment_method=request.payment_method or "COD",
             status="pending",
-            payment_status="pending" if request.payment_method == "COD" else "paid",
+            payment_status="pending",
         )
         db.add(new_order)
         await db.flush()
@@ -214,9 +228,21 @@ class OrderService:
     ) -> Order:
         """Update order fulfillment status."""
         order = await self.get_order_by_id(db, order_id, owner_id=owner_id)
+        previous_status = order.status
         order.status = request.status
         if request.status == "completed":
             order.payment_status = "paid"
+        if request.status == "cancelled" and previous_status != "cancelled":
+            await db.refresh(order, attribute_names=["items"])
+            for item in order.items:
+                if not item.product_id:
+                    continue
+                prod_res = await db.execute(
+                    select(Product).where(Product.id == item.product_id).with_for_update()
+                )
+                product = prod_res.scalar_one_or_none()
+                if product:
+                    product.inventory += item.quantity
         await db.commit()
         await db.refresh(order)
         return order

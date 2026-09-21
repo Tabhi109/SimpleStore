@@ -82,7 +82,11 @@ async def test_store_creation_and_public_retrieval(
     assert prod_json["product_code"].startswith("PROD-")
     assert len(prod_json["images"]) == 2
 
-    # 3. Publish the store
+    # 3. Unpublished storefront is not public
+    unpublished = await client.get("/api/v1/stores/artisan-candles")
+    assert unpublished.status_code == 404
+
+    # 4. Publish the store
     pub_res = await client.post(f"/api/v1/stores/{store_id}/publish", headers=auth_headers)
     assert pub_res.status_code == 200
     assert pub_res.json()["published"] is True
@@ -200,3 +204,66 @@ async def test_order_creation_and_inventory_atomic_deduction(
     assert updated_prods[0]["inventory"] == 25
     assert updated_prods[0]["inventory_display_limit"] == 10
     assert updated_prods[0]["order_limit"] == 3
+
+
+@pytest.mark.asyncio
+async def test_invalid_coupon_is_rejected(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    store_res = await client.post(
+        "/api/v1/stores",
+        json={"name": "Herb Shop", "slug": "herb-shop", "currency": "USD"},
+        headers=auth_headers,
+    )
+    store_id = store_res.json()["id"]
+    prod_res = await client.post(
+        f"/api/v1/stores/{store_id}/products",
+        json={"name": "Mint Tea", "price": 10.00, "inventory": 5, "published": True},
+        headers=auth_headers,
+    )
+    product_id = prod_res.json()["id"]
+    order_res = await client.post(
+        f"/api/v1/stores/{store_id}/orders",
+        json={
+            "customer_name": "Jane Doe",
+            "customer_email": "jane@example.com",
+            "payment_method": "COD",
+            "coupon_code": "NOPE",
+            "items": [{"product_id": product_id, "quantity": 1}],
+        },
+    )
+    assert order_res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_order_detail_requires_merchant_auth(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    store_res = await client.post(
+        "/api/v1/stores",
+        json={"name": "Lockbox", "slug": "lockbox", "currency": "USD"},
+        headers=auth_headers,
+    )
+    store_id = store_res.json()["id"]
+    prod_res = await client.post(
+        f"/api/v1/stores/{store_id}/products",
+        json={"name": "Safe", "price": 12.00, "inventory": 3, "published": True},
+        headers=auth_headers,
+    )
+    order_res = await client.post(
+        f"/api/v1/stores/{store_id}/orders",
+        json={
+            "customer_name": "Jane Doe",
+            "customer_email": "jane@example.com",
+            "payment_method": "COD",
+            "items": [{"product_id": prod_res.json()["id"], "quantity": 1}],
+        },
+    )
+    order_id = order_res.json()["id"]
+    anon = await client.get(f"/api/v1/orders/{order_id}")
+    assert anon.status_code == 401
+    owner = await client.get(f"/api/v1/orders/{order_id}", headers=auth_headers)
+    assert owner.status_code == 200
+
