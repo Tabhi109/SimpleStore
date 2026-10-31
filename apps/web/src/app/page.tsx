@@ -90,9 +90,9 @@ export default function HomePage() {
               className="w-full sm:w-auto h-12 px-7 text-sm font-semibold border-border/80 hover:bg-muted/60 transition-all"
               asChild
             >
-              <Link href="/dashboard">
-                <Layout className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Merchant Dashboard</span>
+              <Link href="/store/lumen-atelier">
+                <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>View the sample store</span>
               </Link>
             </Button>
           </div>

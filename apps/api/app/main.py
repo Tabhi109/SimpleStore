@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -41,13 +42,27 @@ logging.basicConfig(
 logger = logging.getLogger("simplestore")
 
 
+def writable_uploads_dir() -> str:
+    """Pick a directory that exists on both a laptop and a read-only host."""
+    candidates = [
+        os.path.join(os.getcwd(), "uploads"),
+        os.path.join(tempfile.gettempdir(), "simplestore-uploads"),
+    ]
+    for path in candidates:
+        try:
+            os.makedirs(path, exist_ok=True)
+            return path
+        except OSError:
+            continue
+    raise RuntimeError("No writable uploads directory is available.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events (startup & shutdown) with connection retries."""
     logger.info(f"Starting {settings.APP_NAME} in [{settings.ENVIRONMENT}] mode...")
 
-    # Ensure uploads directory exists
-    os.makedirs(os.path.join(os.getcwd(), "uploads"), exist_ok=True)
+    writable_uploads_dir()
 
     # Retry database connection & create schema if needed
     max_retries = 5
@@ -87,8 +102,7 @@ app = FastAPI(
 setup_middleware(app)
 
 # Static Files for Local Uploads
-upload_dir = os.path.join(os.getcwd(), "uploads")
-os.makedirs(upload_dir, exist_ok=True)
+upload_dir = writable_uploads_dir()
 app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 # Root API v1 Router
@@ -124,9 +138,15 @@ async def health_check(
     except Exception as e:
         logger.error(f"Health check Redis ping failed: {e}")
 
-    # Evaluate Overall Status
-    is_healthy = db_connected and redis_connected
-    system_status = "healthy" if is_healthy else "degraded"
+    # Database is required. Redis is a cache, so a missing cache stays degraded
+    # without taking the API offline (hosts treat 503 as a failed deploy).
+    if db_connected and redis_connected:
+        system_status = "healthy"
+    elif db_connected:
+        system_status = "degraded"
+    else:
+        system_status = "unhealthy"
+    is_healthy = db_connected
 
     payload = {
         "status": system_status,

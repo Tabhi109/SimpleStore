@@ -41,6 +41,9 @@ test-results/
 .env.production.local
 *.local
 
+# Vercel local project links
+.vercel/
+
 # IDE & OS
 .DS_Store
 Thumbs.db

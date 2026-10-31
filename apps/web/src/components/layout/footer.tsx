@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Activity, Code, ExternalLink, Github, Heart, Layers, ShieldCheck, Sparkles, Store } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export function Footer() {
   const pathname = usePathname();
   const isStorefront = pathname?.startsWith("/store/");
@@ -67,7 +69,7 @@ export function Footer() {
             <ul className="space-y-1.5 text-xs">
               <li>
                 <a
-                  href="http://localhost:8000/docs"
+                  href={`${API_URL}/docs`}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-foreground transition-colors inline-flex items-center gap-1"
@@ -78,7 +80,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="http://localhost:8000/api/v1/health"
+                  href={`${API_URL}/api/v1/health`}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-foreground transition-colors inline-flex items-center gap-1"

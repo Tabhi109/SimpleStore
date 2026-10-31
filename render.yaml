@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: simplestore-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: PROJECT_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: NEON_DB_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: REDIS_URL
+        sync: false

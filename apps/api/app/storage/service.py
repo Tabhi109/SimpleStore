@@ -2,6 +2,7 @@
 
 import os
 import re
+import tempfile
 import uuid
 
 import httpx
@@ -82,8 +83,12 @@ class StorageService:
 
     async def _upload_local(self, pathname: str, data: bytes, content_type: str) -> dict:
         upload_root = os.path.join(os.getcwd(), "uploads")
+        try:
+            os.makedirs(upload_root, exist_ok=True)
+        except OSError:
+            upload_root = os.path.join(tempfile.gettempdir(), "simplestore-uploads")
+            os.makedirs(upload_root, exist_ok=True)
         dest = os.path.join(upload_root, os.path.basename(pathname))
-        os.makedirs(upload_root, exist_ok=True)
         with open(dest, "wb") as handle:
             handle.write(data)
         public_path = f"/uploads/{os.path.basename(pathname)}"
